@@ -1,3 +1,4 @@
+
 export interface Expense {
   id: string;
   description: string;
@@ -11,5 +12,5 @@ export interface BudgetGoal {
   limit: number;
 }
 
-export const CATEGORIES = ['Food', 'Transport', 'Shopping', 'Utilities', 'Entertainment', 'Health', 'Education', 'Gifts', 'Other'] as const;
+export const CATEGORIES = ['Food', 'Transport', 'Shopping', 'Utilities', 'Entertainment', 'Health', 'Education', 'Gifts', 'Rent', 'Savings', 'Other'] as const;
 export type Category = typeof CATEGORIES[number];

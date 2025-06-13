@@ -23,7 +23,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"; // AlertDialogTrigger removed as it's not directly used here
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -38,7 +38,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { ExportReportCard } from "./ExportReportCard";
-import { UserProfileCard } from "./UserProfileCard"; // Import UserProfileCard
+import { UserProfileCard } from "./UserProfileCard";
 
 const initialExpensesData: Expense[] = [
   { id: '1', description: 'Lunch with team', amount: 1200, category: 'Food', date: new Date(2024, 6, 15).toISOString() },
@@ -47,6 +47,8 @@ const initialExpensesData: Expense[] = [
   { id: '4', description: 'Electricity Bill', amount: 800, category: 'Utilities', date: new Date(2024, 6, 5).toISOString() },
   { id: '5', description: 'Movie tickets', amount: 600, category: 'Entertainment', date: new Date(2024, 6, 20).toISOString() },
   { id: '6', description: 'Groceries', amount: 3000, category: 'Food', date: new Date(2024, 6, 22).toISOString() },
+  { id: '7', description: 'Apartment Rent', amount: 20000, category: 'Rent', date: new Date(2024, 6, 1).toISOString() },
+  { id: '8', description: 'Mutual Fund SIP', amount: 5000, category: 'Savings', date: new Date(2024, 6, 5).toISOString() },
 ];
 
 const initialBudgetGoalsData: BudgetGoal[] = [
@@ -58,6 +60,8 @@ const initialBudgetGoalsData: BudgetGoal[] = [
   { category: 'Health', limit: 2500 },
   { category: 'Education', limit: 4000 },
   { category: 'Gifts', limit: 1500 },
+  { category: 'Rent', limit: 25000 },
+  { category: 'Savings', limit: 10000 },
   { category: 'Other', limit: 1000 },
 ];
 

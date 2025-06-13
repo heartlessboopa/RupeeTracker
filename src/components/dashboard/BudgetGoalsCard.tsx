@@ -1,7 +1,8 @@
+
 "use client";
 
 import * as React from "react";
-import { Target, Utensils, Car, ShoppingCart, Home, Tv, HeartPulse, BookOpen, Gift, GripVertical } from "lucide-react";
+import { Target, Utensils, Car, ShoppingCart, Home, Tv, HeartPulse, BookOpen, Gift, GripVertical, PiggyBank, Building } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -22,6 +23,8 @@ const categoryIcons: Record<Category, React.ReactNode> = {
   Health: <HeartPulse className="h-5 w-5" />,
   Education: <BookOpen className="h-5 w-5" />,
   Gifts: <Gift className="h-5 w-5" />,
+  Rent: <Building className="h-5 w-5" />, // Using Building for Rent
+  Savings: <PiggyBank className="h-5 w-5" />,
   Other: <GripVertical className="h-5 w-5" />,
 };
 
