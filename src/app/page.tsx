@@ -14,6 +14,8 @@ export default function ProtectedHomePage() {
   const router = useRouter();
 
   React.useEffect(() => {
+    // isLoading is true initially, then onAuthStateChanged sets user or null.
+    // If loading is finished and there's no user, redirect.
     if (!isLoading && !user) {
       router.replace('/login');
     }

@@ -29,8 +29,8 @@ type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register } = useAuth();
-  const { toast } = useToast();
+  const { register, isLoading: authIsLoading } = useAuth();
+  const { toast } = useToast(); // Still use local toast for success message here
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
@@ -41,19 +41,17 @@ export default function RegisterPage() {
     },
   });
 
-  const onSubmit = (data: RegisterFormValues) => {
-    const success = register(data.email, data.password);
+  const onSubmit = async (data: RegisterFormValues) => {
+    const success = await register({ email: data.email, passwordAttempt: data.password });
     if (success) {
       toast({ title: 'Registration Successful', description: 'You can now log in.' });
       router.push('/login');
     } else {
-      toast({
-        title: 'Registration Failed',
-        description: 'An account with this email may already exist.',
-        variant: 'destructive',
-      });
+      // Failure toast is handled by AuthContext
     }
   };
+
+  const isSubmitting = form.formState.isSubmitting || authIsLoading;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -75,7 +73,7 @@ export default function RegisterPage() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="you@example.com" {...field} />
+                      <Input type="email" placeholder="you@example.com" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -88,7 +86,7 @@ export default function RegisterPage() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
+                      <Input type="password" placeholder="••••••••" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -101,14 +99,14 @@ export default function RegisterPage() {
                   <FormItem>
                     <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
+                      <Input type="password" placeholder="••••••••" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Registering...' : 'Register'}
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? 'Registering...' : 'Register'}
               </Button>
             </form>
           </Form>

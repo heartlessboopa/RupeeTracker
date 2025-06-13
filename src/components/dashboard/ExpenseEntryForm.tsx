@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, PlusCircle, Pencil, Save } from "lucide-react";
+import { CalendarIcon, PlusCircle, Pencil, Save, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -36,13 +36,14 @@ const formSchema = z.object({
 export type ExpenseFormValues = z.infer<typeof formSchema>;
 
 interface ExpenseEntryFormProps {
-  onSaveExpense: (data: ExpenseFormValues, idToUpdate?: string) => void;
+  onSaveExpense: (data: ExpenseFormValues, idToUpdate?: string) => Promise<void>; // Make async
   editingExpense: Expense | null;
   onCancelEdit: () => void;
   className?: string;
+  isSubmitting?: boolean; // To disable form during parent operations
 }
 
-export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit, className }: ExpenseEntryFormProps) {
+export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit, className, isSubmitting: parentIsSubmitting }: ExpenseEntryFormProps) {
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -54,6 +55,7 @@ export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit, 
   });
 
   const isEditing = !!editingExpense;
+  const [isSaving, setIsSaving] = React.useState(false); // Local saving state
 
   React.useEffect(() => {
     if (editingExpense) {
@@ -61,7 +63,7 @@ export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit, 
         description: editingExpense.description,
         amount: editingExpense.amount,
         category: editingExpense.category as Category,
-        date: new Date(editingExpense.date),
+        date: new Date(editingExpense.date), // Ensure date is a Date object
       });
     } else {
       form.reset({
@@ -73,10 +75,11 @@ export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit, 
     }
   }, [editingExpense, form]);
 
-  function onSubmit(values: ExpenseFormValues) {
+  async function onSubmit(values: ExpenseFormValues) {
+    setIsSaving(true);
     const isNewExpense = !editingExpense; 
     
-    onSaveExpense(values, editingExpense ? editingExpense.id : undefined);
+    await onSaveExpense(values, editingExpense ? editingExpense.id : undefined);
 
     if (isNewExpense) {
       form.reset({
@@ -86,7 +89,11 @@ export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit, 
         date: new Date(), 
       });
     }
+    // If editing, parent component (DashboardPage) handles clearing `editingExpense` which triggers useEffect
+    setIsSaving(false);
   }
+
+  const formDisabled = isSaving || parentIsSubmitting;
 
   return (
     <Card className={cn("shadow-lg", className)}>
@@ -109,7 +116,7 @@ export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit, 
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Lunch, Groceries" {...field} />
+                    <Input placeholder="e.g., Lunch, Groceries" {...field} disabled={formDisabled} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -122,7 +129,7 @@ export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit, 
                 <FormItem>
                   <FormLabel>Amount (₹)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="0.00" {...field} />
+                    <Input type="number" placeholder="0.00" {...field} disabled={formDisabled} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -134,7 +141,7 @@ export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit, 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={formDisabled}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a category" />
@@ -167,6 +174,7 @@ export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit, 
                             "w-full pl-3 text-left font-normal",
                             !field.value && "text-muted-foreground"
                           )}
+                          disabled={formDisabled}
                         >
                           {field.value ? (
                             format(field.value, "PPP")
@@ -183,7 +191,7 @@ export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit, 
                         selected={field.value}
                         onSelect={field.onChange}
                         disabled={(date) =>
-                          date > new Date() || date < new Date("1900-01-01")
+                          date > new Date() || date < new Date("1900-01-01") || formDisabled
                         }
                         initialFocus
                       />
@@ -193,12 +201,12 @@ export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit, 
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full">
-              {isEditing ? <Save className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-              {isEditing ? "Update Expense" : "Add Expense"}
+            <Button type="submit" className="w-full" disabled={formDisabled}>
+              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isEditing ? <Save className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />)}
+              {isEditing ? (isSaving ? "Updating..." : "Update Expense") : (isSaving ? "Adding..." : "Add Expense")}
             </Button>
             {isEditing && (
-              <Button type="button" variant="outline" onClick={onCancelEdit} className="w-full">
+              <Button type="button" variant="outline" onClick={onCancelEdit} className="w-full" disabled={formDisabled}>
                 Cancel Edit
               </Button>
             )}

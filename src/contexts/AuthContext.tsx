@@ -4,119 +4,144 @@
 import type React from 'react';
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-
-interface User {
-  email: string;
-  // In a real app, store a password hash, not the password itself.
-  // For prototype simplicity, storing password directly in localStorage.
-  // THIS IS NOT SECURE FOR PRODUCTION.
-  password?: string; 
-}
+import { authService } from '@/services/authService';
+import { expenseService } from '@/services/expenseService';
+import type { AppUser } from '@/types'; // Using AppUser from central types
+import type { LoginCredentials, RegisterCredentials } from '@/types/auth';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
-  user: User | null;
+  user: AppUser | null;
   isLoading: boolean;
-  login: (email: string, passwordAttempt: string) => boolean;
-  logout: () => void;
-  register: (email: string, passwordAttempt: string) => boolean;
-  changePassword: (currentUserEmail: string, currentPasswordAttempt: string, newPasswordVal: string) => boolean;
+  login: (credentials: LoginCredentials) => Promise<boolean>;
+  logout: () => Promise<void>;
+  register: (credentials: RegisterCredentials) => Promise<boolean>;
+  changePassword: (currentPasswordAttempt: string, newPasswordVal: string) => Promise<boolean>;
+  clearAllApplicationData: (currentPasswordAttempt: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_USER_KEY = 'rupeeTrackUser';
-const LOCAL_STORAGE_USERS_LIST_KEY = 'rupeeTrackUsersList'; // For multi-user prototype
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     setIsLoading(true);
-    try {
-      const storedUser = localStorage.getItem(LOCAL_STORAGE_USER_KEY);
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    const unsubscribe = authService.onAuthUserChanged((authUser) => {
+      setUser(authUser);
+      setIsLoading(false);
+      if (!authUser && !['/login', '/register'].includes(window.location.pathname)) {
+         // router.replace('/login'); // Handled by ProtectedHomePage now
       }
-    } catch (error) {
-      console.error("Failed to parse user from localStorage", error);
-      localStorage.removeItem(LOCAL_STORAGE_USER_KEY); // Clear corrupted data
-    }
-    setIsLoading(false);
-  }, []);
-
-  const getUsersList = useCallback((): User[] => {
-    try {
-      const storedUsers = localStorage.getItem(LOCAL_STORAGE_USERS_LIST_KEY);
-      return storedUsers ? JSON.parse(storedUsers) : [];
-    } catch (error) {
-      console.error("Failed to parse users list from localStorage", error);
-      localStorage.removeItem(LOCAL_STORAGE_USERS_LIST_KEY);
-      return [];
-    }
-  }, []);
-
-  const saveUsersList = useCallback((users: User[]) => {
-    localStorage.setItem(LOCAL_STORAGE_USERS_LIST_KEY, JSON.stringify(users));
-  }, []);
-
-  const login = useCallback((email: string, passwordAttempt: string): boolean => {
-    const users = getUsersList();
-    const foundUser = users.find(u => u.email === email && u.password === passwordAttempt);
-
-    if (foundUser) {
-      const currentUser = { email: foundUser.email, password: foundUser.password }; // Store password for re-auth
-      localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(currentUser));
-      setUser(currentUser);
-      return true;
-    }
-    return false;
-  }, [getUsersList]);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem(LOCAL_STORAGE_USER_KEY);
-    setUser(null);
-    router.push('/login');
+    });
+    return () => unsubscribe(); // Cleanup subscription on unmount
   }, [router]);
 
-  const register = useCallback((email: string, passwordAttempt: string): boolean => {
-    const users = getUsersList();
-    if (users.find(u => u.email === email)) {
-      return false; // User already exists
+  const login = useCallback(async (credentials: LoginCredentials): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      const loggedInUser = await authService.loginUser({email: credentials.email, password: credentials.passwordAttempt});
+      setUser(loggedInUser); // Set user from authService response
+      setIsLoading(false);
+      return true;
+    } catch (error: any) {
+      console.error("Login failed in context:", error);
+      setIsLoading(false);
+      toast({ title: "Login Failed", description: error.message || "Invalid email or password.", variant: "destructive" });
+      return false;
     }
-    const newUser: User = { email, password: passwordAttempt };
-    users.push(newUser);
-    saveUsersList(users);
-    return true;
-  }, [getUsersList, saveUsersList]);
+  }, [toast]);
 
-  const changePassword = useCallback((currentUserEmail: string, currentPasswordAttempt: string, newPasswordVal: string): boolean => {
-    const users = getUsersList();
-    const userIndex = users.findIndex(u => u.email === currentUserEmail);
-
-    if (userIndex === -1) {
-      return false; // User not found
+  const logout = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      await authService.logoutUser();
+      setUser(null);
+      router.push('/login'); // Explicitly redirect after logout
+    } catch (error: any) {
+      console.error("Logout failed:", error);
+      toast({ title: "Logout Failed", description: error.message || "Could not log out.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
+  }, [router, toast]);
 
-    if (users[userIndex].password !== currentPasswordAttempt) {
-      return false; // Current password incorrect
+  const register = useCallback(async (credentials: RegisterCredentials): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      await authService.registerUser({email: credentials.email, password: credentials.passwordAttempt});
+      // Don't auto-login, user will be redirected to login page after successful registration message
+      setIsLoading(false);
+      return true;
+    } catch (error: any) {
+      console.error("Registration failed in context:", error);
+      setIsLoading(false);
+      toast({ title: "Registration Failed", description: error.message || "Could not register user.", variant: "destructive" });
+      return false;
     }
+  }, [toast]);
 
-    users[userIndex].password = newPasswordVal;
-    saveUsersList(users);
-
-    // Update current user session if it's the logged-in user
-    if (user && user.email === currentUserEmail) {
-      const updatedUser = { ...user, password: newPasswordVal };
-      localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(updatedUser));
-      setUser(updatedUser);
+  const changePassword = useCallback(async (currentPasswordAttempt: string, newPasswordVal: string): Promise<boolean> => {
+    if (!user) {
+      toast({ title: "Error", description: "You are not logged in.", variant: "destructive" });
+      return false;
     }
-    return true;
-  }, [getUsersList, saveUsersList, user]);
+    setIsLoading(true);
+    try {
+      await authService.changeUserPassword(currentPasswordAttempt, newPasswordVal);
+      toast({ title: 'Password Changed', description: 'Your password has been updated successfully.' });
+      setIsLoading(false);
+      return true;
+    } catch (error: any) {
+      console.error("Password change failed:", error);
+      toast({ title: 'Password Change Failed', description: error.message || "An error occurred.", variant: 'destructive' });
+      setIsLoading(false);
+      return false;
+    }
+  }, [user, toast]);
+  
+  const clearAllApplicationData = useCallback(async (currentPasswordAttempt: string): Promise<boolean> => {
+    if (!user) {
+      toast({ title: "Error", description: "You must be logged in to clear data.", variant: "destructive" });
+      return false;
+    }
+    setIsLoading(true);
+    try {
+      // Step 1: Delete all expenses for the user from Firestore
+      await expenseService.deleteAllUserExpenses(user.uid);
+      toast({ title: "Expenses Cleared", description: "Your expense data has been deleted." });
+
+      // Step 2: Delete the user account from Firebase Auth
+      // This will also effectively log them out
+      await authService.deleteCurrentUserAccount(currentPasswordAttempt);
+      toast({ title: "Account Deleted", description: "Your account has been successfully deleted." });
+      
+      setUser(null); // Clear local user state
+      router.push('/register'); // Redirect to register or login after account deletion
+      setIsLoading(false);
+      return true;
+
+    } catch (error: any) {
+      console.error("Failed to clear all application data:", error);
+      toast({
+        title: "Operation Failed",
+        description: error.message || "Could not clear all data. Your account might still exist if only expenses failed to delete.",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+      // If account deletion failed due to wrong password, user is still logged in.
+      // If expenses were deleted but account deletion failed, user is still logged in.
+      // Re-fetch user to ensure state consistency if needed, or rely on onAuthStateChanged.
+      // For now, we assume if deleteCurrentUserAccount throws, the user is still effectively logged in (session wise).
+      return false;
+    }
+  }, [user, router, toast]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, register, changePassword }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, register, changePassword, clearAllApplicationData }}>
       {children}
     </AuthContext.Provider>
   );

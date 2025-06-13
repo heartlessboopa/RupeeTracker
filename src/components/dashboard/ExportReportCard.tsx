@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { Download, CalendarIcon } from "lucide-react";
+import { Download, CalendarIcon, Loader2 } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -69,10 +69,12 @@ type ExportFormValues = z.infer<typeof formSchema>;
 interface ExportReportCardProps {
   expenses: Expense[];
   className?: string;
+  isLoading?: boolean;
 }
 
-export function ExportReportCard({ expenses, className }: ExportReportCardProps) {
+export function ExportReportCard({ expenses, className, isLoading }: ExportReportCardProps) {
   const { toast } = useToast();
+  const [isGenerating, setIsGenerating] = React.useState(false);
   const { control, handleSubmit, watch, formState: { errors } } = useForm<ExportFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -85,6 +87,7 @@ export function ExportReportCard({ expenses, className }: ExportReportCardProps)
   const selectedReportType = watch("reportType");
 
   const onSubmit = async (data: ExportFormValues) => {
+    setIsGenerating(true);
     let filteredExpenses = [...expenses]; 
     let reportTitle = "Expense Report";
     let filterDescription = "";
@@ -127,6 +130,7 @@ export function ExportReportCard({ expenses, className }: ExportReportCardProps)
           reportTitle = "Custom Range Expense Report";
         } else {
           toast({ title: "Error", description: "Custom date range requires start and end dates.", variant: "destructive" });
+          setIsGenerating(false);
           return;
         }
         break;
@@ -149,6 +153,7 @@ export function ExportReportCard({ expenses, className }: ExportReportCardProps)
         title: "No Data",
         description: "No expenses found for the selected period.",
       });
+      setIsGenerating(false);
       return;
     }
 
@@ -165,8 +170,12 @@ export function ExportReportCard({ expenses, className }: ExportReportCardProps)
         description: "There was a problem generating the PDF. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsGenerating(false);
     }
   };
+  
+  const formDisabled = isGenerating || isLoading;
 
   return (
     <Card className={cn("shadow-lg", className)}>
@@ -178,6 +187,11 @@ export function ExportReportCard({ expenses, className }: ExportReportCardProps)
         <CardDescription>Download your expenses as a PDF document.</CardDescription>
       </CardHeader>
       <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center items-center h-full py-10">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <Controller
             name="reportType"
@@ -185,7 +199,7 @@ export function ExportReportCard({ expenses, className }: ExportReportCardProps)
             render={({ field }) => (
               <div>
                 <Label htmlFor="reportType" className="mb-1 block">Report Period</Label>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={formDisabled}>
                     <SelectTrigger id="reportType">
                         <SelectValue placeholder="Select period" />
                     </SelectTrigger>
@@ -219,6 +233,7 @@ export function ExportReportCard({ expenses, className }: ExportReportCardProps)
                               !field.value && "text-muted-foreground",
                               errors.startDate && "border-destructive"
                             )}
+                            disabled={formDisabled}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {field.value ? format(field.value, "dd/MM/yyyy") : <span>Pick a date</span>}
@@ -229,7 +244,7 @@ export function ExportReportCard({ expenses, className }: ExportReportCardProps)
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
-                          disabled={(date) => date > new Date() || date < new Date("2000-01-01")}
+                          disabled={(date) => date > new Date() || date < new Date("2000-01-01") || formDisabled}
                           initialFocus
                         />
                       </PopoverContent>
@@ -254,6 +269,7 @@ export function ExportReportCard({ expenses, className }: ExportReportCardProps)
                               !field.value && "text-muted-foreground",
                               errors.endDate && "border-destructive"
                             )}
+                            disabled={formDisabled}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {field.value ? format(field.value, "dd/MM/yyyy") : <span>Pick a date</span>}
@@ -264,7 +280,7 @@ export function ExportReportCard({ expenses, className }: ExportReportCardProps)
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
-                          disabled={(date) => date > new Date() || date < new Date("2000-01-01")}
+                          disabled={(date) => date > new Date() || date < new Date("2000-01-01") || formDisabled}
                           initialFocus
                         />
                       </PopoverContent>
@@ -275,13 +291,13 @@ export function ExportReportCard({ expenses, className }: ExportReportCardProps)
               />
             </div>
           )}
-          <Button type="submit" className="w-full">
-            <Download className="mr-2 h-4 w-4" />
-            Generate & Download PDF
+          <Button type="submit" className="w-full" disabled={formDisabled}>
+            {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+            {isGenerating ? "Generating..." : "Generate & Download PDF"}
           </Button>
         </form>
+        )}
       </CardContent>
     </Card>
   );
 }
-

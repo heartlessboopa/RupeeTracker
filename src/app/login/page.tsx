@@ -14,7 +14,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+// useToast is now used within AuthContext for login failures
+// import { useToast } from '@/hooks/use-toast'; 
 
 const loginFormSchema = z.object({
   email: z.string().email('Invalid email address').min(1, 'Email is required'),
@@ -25,8 +26,8 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
-  const { toast } = useToast();
+  const { login, isLoading: authIsLoading } = useAuth();
+  // const { toast } = useToast(); // Replaced by AuthContext's toast
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
@@ -36,20 +37,19 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = (data: LoginFormValues) => {
-    const success = login(data.email, data.password);
+  const onSubmit = async (data: LoginFormValues) => {
+    const success = await login({ email: data.email, passwordAttempt: data.password });
     if (success) {
-      toast({ title: 'Login Successful', description: 'Welcome back!' });
+      // Toast for success can be added here or rely on AuthContext if it does it
+      // toast({ title: 'Login Successful', description: 'Welcome back!' });
       router.push('/');
     } else {
-      toast({
-        title: 'Login Failed',
-        description: 'Invalid email or password. Please try again or register.',
-        variant: 'destructive',
-      });
+      // AuthContext now handles failure toast
       form.resetField('password');
     }
   };
+
+  const isSubmitting = form.formState.isSubmitting || authIsLoading;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -71,7 +71,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="you@example.com" {...field} />
+                      <Input type="email" placeholder="you@example.com" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -84,14 +84,14 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
+                      <Input type="password" placeholder="••••••••" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Logging in...' : 'Log In'}
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? 'Logging in...' : 'Log In'}
               </Button>
             </form>
           </Form>

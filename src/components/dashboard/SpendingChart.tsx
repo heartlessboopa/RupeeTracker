@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { BarChart3, TrendingDown, TrendingUp } from "lucide-react"; 
+import { BarChart3, Loader2 } from "lucide-react"; 
 import {
   BarChart,
   Bar,
@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 interface SpendingChartProps {
   expenses: Expense[];
   className?: string;
+  isLoading?: boolean;
 }
 
 const chartColors = [
@@ -74,7 +75,7 @@ const CustomizedXAxisTick = (props: any) => {
   );
 };
 
-export function SpendingChart({ expenses, className }: SpendingChartProps) {
+export function SpendingChart({ expenses, className, isLoading }: SpendingChartProps) {
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -109,7 +110,9 @@ export function SpendingChart({ expenses, className }: SpendingChartProps) {
     return config;
   }, []);
 
-  if (!mounted) {
+  const chartContentHeight = 350;
+
+  if (!mounted || isLoading) {
     return (
       <Card className={cn("shadow-lg", className)}>
         <CardHeader>
@@ -119,8 +122,8 @@ export function SpendingChart({ expenses, className }: SpendingChartProps) {
           </CardTitle>
           <CardDescription>Visual breakdown of your expenses.</CardDescription>
         </CardHeader>
-        <CardContent className="h-[350px] flex items-center justify-center">
-          <p className="text-muted-foreground">Loading chart...</p>
+        <CardContent className="h-[--chart-height] flex items-center justify-center" style={{ '--chart-height': `${chartContentHeight}px` } as React.CSSProperties}>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </CardContent>
       </Card>
     );
@@ -135,14 +138,14 @@ export function SpendingChart({ expenses, className }: SpendingChartProps) {
         </CardTitle>
         <CardDescription>Visual breakdown of your expenses.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent style={{ '--chart-height': `${chartContentHeight}px` } as React.CSSProperties}>
         {expenses.length === 0 ? (
-          <div className="h-[350px] flex items-center justify-center">
+          <div className="h-[--chart-height] flex items-center justify-center" style={{ '--chart-height': `${chartContentHeight}px` } as React.CSSProperties}>
             <p className="text-muted-foreground">No expense data to display.</p>
           </div>
         ) : (
-          <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-            <ResponsiveContainer width="100%" height={350}>
+          <ChartContainer config={chartConfig} className="min-h-[300px] w-full h-[var(--chart-height)]">
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart 
                 data={dataByCategory} 
                 margin={{ top: 5, right: 20, left: 10, bottom: 25 }} 
