@@ -2,11 +2,11 @@
 "use client";
 
 import * as React from 'react';
-import { IndianRupee, TrendingDown, Star, ListChecks, Pencil, Trash2, ShieldCheck, BarChart3 } from "lucide-react"; // Changed PieChart to BarChart3
+import { IndianRupee, TrendingDown, Star, ListChecks, Pencil, Trash2, ShieldCheck, BarChart3 } from "lucide-react";
 import { OverviewCard } from "./OverviewCard";
 import { ExpenseEntryForm, type ExpenseFormValues } from "./ExpenseEntryForm";
 import { SpendingChart } from "./SpendingChart";
-import type { Expense, Category } from "@/types";
+import type { Expense } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,22 +27,47 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { ExportReportCard } from "./ExportReportCard";
-import { initialExpensesData } from '@/data/initialData'; // Import initial expenses
+import { initialExpensesData } from '@/data/initialData';
 
 type ActionType = 'edit' | 'delete';
+const LOCAL_STORAGE_EXPENSES_KEY = 'rupeeTrackExpenses';
 
 export default function DashboardPage() {
   const { toast } = useToast();
   const { user } = useAuth(); 
-  const [expenses, setExpenses] = React.useState<Expense[]>(() => 
-    [...initialExpensesData].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  );
+  
+  const [expenses, setExpenses] = React.useState<Expense[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const storedExpenses = localStorage.getItem(LOCAL_STORAGE_EXPENSES_KEY);
+        if (storedExpenses) {
+          const parsedExpenses: Expense[] = JSON.parse(storedExpenses);
+          // Ensure dates are valid and sort
+          return parsedExpenses
+            .filter(exp => exp.date && !isNaN(new Date(exp.date).getTime())) 
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        }
+      } catch (error) {
+        console.error("Failed to load expenses from localStorage", error);
+        // Fall through to initial data if localStorage fails
+      }
+    }
+    // Fallback to initial data, sorted
+    return [...initialExpensesData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  });
+
   const [expenseToEdit, setExpenseToEdit] = React.useState<Expense | null>(null);
   
   const [showPasswordConfirmDialog, setShowPasswordConfirmDialog] = React.useState(false);
   const [passwordToConfirm, setPasswordToConfirm] = React.useState('');
   const [currentAction, setCurrentAction] = React.useState<ActionType | null>(null);
   const [selectedExpenseForAction, setSelectedExpenseForAction] = React.useState<Expense | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_EXPENSES_KEY, JSON.stringify(expenses));
+    }
+  }, [expenses]);
 
 
   const handleSaveExpense = (data: ExpenseFormValues, idToUpdate?: string) => {
@@ -166,7 +191,6 @@ export default function DashboardPage() {
           <ExportReportCard expenses={expenses} />
         </div>
         <div className="lg:col-span-2 space-y-6">
-          {/* The icon in SpendingChart card header is updated internally in SpendingChart.tsx */}
           <SpendingChart expenses={expenses} />
         </div>
       </div>
@@ -258,4 +282,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
