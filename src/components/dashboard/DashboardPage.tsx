@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { IndianRupee, TrendingDown, PiggyBank, Star, ListChecks, Pencil, Trash2 } from "lucide-react";
+import { IndianRupee, TrendingDown, PiggyBank, Star, ListChecks, Pencil, Trash2, ShieldCheck } from "lucide-react";
 import { OverviewCard } from "./OverviewCard";
 import { ExpenseEntryForm, type ExpenseFormValues } from "./ExpenseEntryForm";
 import { SpendingChart } from "./SpendingChart";
@@ -23,10 +23,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/contexts/AuthContext';
 import { ExportReportCard } from "./ExportReportCard";
-
 
 const initialExpensesData: Expense[] = [
   { id: '1', description: 'Lunch with team', amount: 1200, category: 'Food', date: new Date(2024, 6, 15).toISOString() },
@@ -49,16 +61,22 @@ const initialBudgetGoalsData: BudgetGoal[] = [
   { category: 'Other', limit: 1000 },
 ];
 
+type ActionType = 'edit' | 'delete';
 
 export default function DashboardPage() {
   const { toast } = useToast();
+  const { user } = useAuth(); // Get current user for password check
   const [expenses, setExpenses] = React.useState<Expense[]>(() => 
     [...initialExpensesData].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   );
   const [budgetGoals] = React.useState<BudgetGoal[]>(initialBudgetGoalsData);
   const [expenseToEdit, setExpenseToEdit] = React.useState<Expense | null>(null);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = React.useState(false);
-  const [selectedExpenseForDelete, setSelectedExpenseForDelete] = React.useState<Expense | null>(null);
+  
+  const [showPasswordConfirmDialog, setShowPasswordConfirmDialog] = React.useState(false);
+  const [passwordToConfirm, setPasswordToConfirm] = React.useState('');
+  const [currentAction, setCurrentAction] = React.useState<ActionType | null>(null);
+  const [selectedExpenseForAction, setSelectedExpenseForAction] = React.useState<Expense | null>(null);
+
 
   const handleSaveExpense = (data: ExpenseFormValues, idToUpdate?: string) => {
     if (idToUpdate) {
@@ -88,34 +106,63 @@ export default function DashboardPage() {
         description: `${data.description} for ₹${data.amount} added successfully.`,
       });
     }
-    setExpenseToEdit(null);
+    setExpenseToEdit(null); // Reset editing state
   };
 
-  const handleEditExpense = (expense: Expense) => {
-    setExpenseToEdit(expense);
-    const formElement = document.getElementById("expense-form-card"); 
-    if (formElement) {
-        formElement.scrollIntoView({ behavior: "smooth" });
+  const initiateEditExpense = (expense: Expense) => {
+    setSelectedExpenseForAction(expense);
+    setCurrentAction('edit');
+    setShowPasswordConfirmDialog(true);
+  };
+
+  const initiateDeleteExpense = (expense: Expense) => {
+    setSelectedExpenseForAction(expense);
+    setCurrentAction('delete');
+    setShowPasswordConfirmDialog(true);
+  };
+
+  const handlePasswordConfirm = () => {
+    if (!user || !user.password) {
+      toast({ title: "Error", description: "User session error.", variant: "destructive" });
+      setShowPasswordConfirmDialog(false);
+      return;
     }
-  };
+    if (passwordToConfirm !== user.password) {
+      toast({ title: "Incorrect Password", description: "The password you entered is incorrect.", variant: "destructive" });
+      setPasswordToConfirm(''); // Clear password field
+      return;
+    }
 
-  const handleOpenDeleteDialog = (expense: Expense) => {
-    setSelectedExpenseForDelete(expense);
-    setShowDeleteConfirmation(true);
-  };
-
-  const handleConfirmDelete = () => {
-    if (selectedExpenseForDelete) {
-      setExpenses(prev => prev.filter(exp => exp.id !== selectedExpenseForDelete.id));
+    // Password confirmed, proceed with action
+    setShowPasswordConfirmDialog(false);
+    setPasswordToConfirm('');
+    
+    if (currentAction === 'edit' && selectedExpenseForAction) {
+      setExpenseToEdit(selectedExpenseForAction);
+      const formElement = document.getElementById("expense-form-card"); 
+      if (formElement) {
+          formElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    } else if (currentAction === 'delete' && selectedExpenseForAction) {
+      setExpenses(prev => prev.filter(exp => exp.id !== selectedExpenseForAction!.id));
       toast({
         title: "Expense Deleted",
-        description: `${selectedExpenseForDelete.description} deleted.`,
+        description: `${selectedExpenseForAction!.description} deleted.`,
         variant: "destructive"
       });
-      setShowDeleteConfirmation(false);
-      setSelectedExpenseForDelete(null);
     }
+    
+    setSelectedExpenseForAction(null);
+    setCurrentAction(null);
   };
+  
+  const handleCancelPasswordConfirm = () => {
+    setShowPasswordConfirmDialog(false);
+    setPasswordToConfirm('');
+    setSelectedExpenseForAction(null);
+    setCurrentAction(null);
+  };
+
 
   const handleCancelEdit = () => {
     setExpenseToEdit(null);
@@ -197,10 +244,10 @@ export default function DashboardPage() {
                     <TableCell className="hidden md:table-cell">{format(new Date(expense.date), "dd MMM, yyyy")}</TableCell>
                     <TableCell className="text-right"><CurrencyDisplay amount={expense.amount} /></TableCell>
                     <TableCell className="text-right space-x-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleEditExpense(expense)} title="Edit">
+                      <Button variant="ghost" size="icon" onClick={() => initiateEditExpense(expense)} title="Edit">
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenDeleteDialog(expense)} title="Delete" className="text-destructive hover:text-destructive">
+                      <Button variant="ghost" size="icon" onClick={() => initiateDeleteExpense(expense)} title="Delete" className="text-destructive hover:text-destructive">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -213,28 +260,43 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the expense: 
-              <strong className="px-1">{selectedExpenseForDelete?.description}</strong>
-              for <CurrencyDisplay amount={selectedExpenseForDelete?.amount ?? 0} />.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowDeleteConfirmation(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleConfirmDelete} 
-              className={buttonVariants({ variant: "destructive" })}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
+      <Dialog open={showPasswordConfirmDialog} onOpenChange={(open) => { if(!open) handleCancelPasswordConfirm(); else setShowPasswordConfirmDialog(open);}}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-6 w-6 text-primary" />
+              Confirm Action
+            </DialogTitle>
+            <DialogDescription>
+              To {currentAction} the expense &quot;{selectedExpenseForAction?.description}&quot;, 
+              please enter your password.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="passwordConfirm">Password</Label>
+              <Input 
+                id="passwordConfirm" 
+                type="password" 
+                placeholder="Enter your password"
+                value={passwordToConfirm}
+                onChange={(e) => setPasswordToConfirm(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handlePasswordConfirm(); }}
+              />
+            </div>
+          </div>
+          <DialogFooter className="sm:justify-end gap-2">
+            <DialogClose asChild>
+              <Button type="button" variant="outline" onClick={handleCancelPasswordConfirm}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" onClick={handlePasswordConfirm}>
+              Confirm {currentAction === 'edit' ? 'Edit' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
