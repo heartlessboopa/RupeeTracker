@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Activity, LogOut, UserCircle, LogInIcon } from 'lucide-react';
+import { Activity, LogOut, UserCircle, LogInIcon, User } from 'lucide-react'; // Added User icon
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
@@ -64,8 +64,11 @@ export function Header() {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {/* Add more items like "Profile", "Settings" if needed */}
-                    {/* <DropdownMenuItem>Profile</DropdownMenuItem> */}
+                    <DropdownMenuItem onClick={() => router.push('/profile')} className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                    {/* Add more items like "Settings" if needed */}
                     <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
