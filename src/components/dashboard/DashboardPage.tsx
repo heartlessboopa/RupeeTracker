@@ -1,9 +1,10 @@
+
 "use client";
 
-import * as React from "react";
-import { DollarSign, TrendingDown, PiggyBank, Star, ListChecks } from "lucide-react";
+import * as React from 'react';
+import { DollarSign, TrendingDown, PiggyBank, Star, ListChecks, Pencil, Trash2 } from "lucide-react";
 import { OverviewCard } from "./OverviewCard";
-import { ExpenseEntryForm } from "./ExpenseEntryForm";
+import { ExpenseEntryForm, type ExpenseFormValues } from "./ExpenseEntryForm";
 import { SpendingChart } from "./SpendingChart";
 import { BudgetGoalsCard } from "./BudgetGoalsCard";
 import type { Expense, BudgetGoal } from "@/types";
@@ -12,6 +13,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CurrencyDisplay } from "@/components/common/CurrencyDisplay";
 import { format } from "date-fns";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 const initialExpensesData: Expense[] = [
   { id: '1', description: 'Lunch with team', amount: 1200, category: 'Food', date: new Date(2024, 6, 15).toISOString() },
@@ -36,11 +49,75 @@ const initialBudgetGoalsData: BudgetGoal[] = [
 
 
 export default function DashboardPage() {
-  const [expenses, setExpenses] = React.useState<Expense[]>(initialExpensesData);
-  const [budgetGoals] = React.useState<BudgetGoal[]>(initialBudgetGoalsData); // For now, budget goals are static
+  const { toast } = useToast();
+  const [expenses, setExpenses] = React.useState<Expense[]>(() => 
+    [...initialExpensesData].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  );
+  const [budgetGoals] = React.useState<BudgetGoal[]>(initialBudgetGoalsData);
+  const [expenseToEdit, setExpenseToEdit] = React.useState<Expense | null>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = React.useState(false);
+  const [selectedExpenseForDelete, setSelectedExpenseForDelete] = React.useState<Expense | null>(null);
 
-  const handleAddExpense = (newExpense: Expense) => {
-    setExpenses((prevExpenses) => [newExpense, ...prevExpenses]);
+  const handleSaveExpense = (data: ExpenseFormValues, idToUpdate?: string) => {
+    if (idToUpdate) {
+      setExpenses(prev => 
+        prev.map(exp => 
+          exp.id === idToUpdate 
+          ? { ...exp, ...data, date: data.date.toISOString(), amount: Number(data.amount) } 
+          : exp
+        ).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      );
+      toast({
+        title: "Expense Updated",
+        description: `${data.description} updated successfully.`,
+      });
+    } else {
+      const newExpense: Expense = {
+        id: crypto.randomUUID(),
+        ...data,
+        amount: Number(data.amount),
+        date: data.date.toISOString(),
+      };
+      setExpenses(prevExpenses => 
+        [newExpense, ...prevExpenses].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      );
+      toast({
+        title: "Expense Added",
+        description: `${data.description} for ₹${data.amount} added successfully.`,
+      });
+    }
+    setExpenseToEdit(null);
+  };
+
+  const handleEditExpense = (expense: Expense) => {
+    setExpenseToEdit(expense);
+    // Optionally scroll to form
+    const formElement = document.getElementById("expense-form-card"); // Assuming card has this id or use a ref
+    if (formElement) {
+        formElement.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleOpenDeleteDialog = (expense: Expense) => {
+    setSelectedExpenseForDelete(expense);
+    setShowDeleteConfirmation(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (selectedExpenseForDelete) {
+      setExpenses(prev => prev.filter(exp => exp.id !== selectedExpenseForDelete.id));
+      toast({
+        title: "Expense Deleted",
+        description: `${selectedExpenseForDelete.description} deleted.`,
+        variant: "destructive"
+      });
+      setShowDeleteConfirmation(false);
+      setSelectedExpenseForDelete(null);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setExpenseToEdit(null);
   };
 
   const totalSpent = React.useMemo(() => {
@@ -72,8 +149,12 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-1">
-          <ExpenseEntryForm onAddExpense={handleAddExpense} />
+        <div className="lg:col-span-1" id="expense-form-card">
+          <ExpenseEntryForm 
+            onSaveExpense={handleSaveExpense} 
+            editingExpense={expenseToEdit}
+            onCancelEdit={handleCancelEdit}
+          />
         </div>
         <div className="lg:col-span-2 space-y-6">
           <SpendingChart expenses={expenses} />
@@ -101,15 +182,24 @@ export default function DashboardPage() {
                   <TableHead>Category</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {expenses.slice(0,10).map((expense) => ( // Show recent 10
+                {expenses.slice(0,10).map((expense) => ( 
                   <TableRow key={expense.id}>
                     <TableCell className="font-medium">{expense.description}</TableCell>
                     <TableCell>{expense.category}</TableCell>
                     <TableCell>{format(new Date(expense.date), "dd MMM, yyyy")}</TableCell>
                     <TableCell className="text-right"><CurrencyDisplay amount={expense.amount} /></TableCell>
+                    <TableCell className="text-right space-x-1">
+                      <Button variant="ghost" size="icon" onClick={() => handleEditExpense(expense)} title="Edit">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenDeleteDialog(expense)} title="Delete" className="text-destructive hover:text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -118,6 +208,30 @@ export default function DashboardPage() {
           </ScrollArea>
         </CardContent>
       </Card>
+
+      <AlertDialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the expense: 
+              <strong className="px-1">{selectedExpenseForDelete?.description}</strong>
+              for <CurrencyDisplay amount={selectedExpenseForDelete?.amount ?? 0} />.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDeleteConfirmation(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete} 
+              className={buttonVariants({ variant: "destructive" })}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
+

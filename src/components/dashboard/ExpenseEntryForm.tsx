@@ -1,11 +1,12 @@
+
 "use client";
 
-import * as React from "react";
+import * as React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, PlusCircle } from "lucide-react";
+import { CalendarIcon, PlusCircle, Pencil, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -22,7 +23,6 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
 import type { Expense, Category } from "@/types";
 import { CATEGORIES } from "@/types";
 
@@ -33,14 +33,15 @@ const formSchema = z.object({
   date: z.date({ required_error: "Date is required" }),
 });
 
-type ExpenseFormValues = z.infer<typeof formSchema>;
+export type ExpenseFormValues = z.infer<typeof formSchema>;
 
 interface ExpenseEntryFormProps {
-  onAddExpense: (expense: Expense) => void;
+  onSaveExpense: (data: ExpenseFormValues, idToUpdate?: string) => void;
+  editingExpense: Expense | null;
+  onCancelEdit: () => void;
 }
 
-export function ExpenseEntryForm({ onAddExpense }: ExpenseEntryFormProps) {
-  const { toast } = useToast();
+export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit }: ExpenseEntryFormProps) {
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -51,30 +52,40 @@ export function ExpenseEntryForm({ onAddExpense }: ExpenseEntryFormProps) {
     },
   });
 
+  const isEditing = !!editingExpense;
+
+  React.useEffect(() => {
+    if (editingExpense) {
+      form.reset({
+        description: editingExpense.description,
+        amount: editingExpense.amount,
+        category: editingExpense.category as Category,
+        date: new Date(editingExpense.date),
+      });
+    } else {
+      form.reset({
+        description: "",
+        amount: undefined,
+        category: CATEGORIES[0],
+        date: new Date(),
+      });
+    }
+  }, [editingExpense, form]);
+
   function onSubmit(values: ExpenseFormValues) {
-    const newExpense: Expense = {
-      id: crypto.randomUUID(),
-      ...values,
-      amount: Number(values.amount),
-      date: values.date.toISOString(),
-    };
-    onAddExpense(newExpense);
-    toast({
-      title: "Expense Added",
-      description: `${values.description} for ₹${values.amount} added successfully.`,
-    });
-    form.reset();
-     form.setValue("date", new Date()); // Reset date to today
+    onSaveExpense(values, editingExpense ? editingExpense.id : undefined);
   }
 
   return (
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2">
-          <PlusCircle className="h-6 w-6 text-primary" />
-          Add New Expense
+          {isEditing ? <Pencil className="h-6 w-6 text-primary" /> : <PlusCircle className="h-6 w-6 text-primary" />}
+          {isEditing ? "Edit Expense" : "Add New Expense"}
         </CardTitle>
-        <CardDescription>Track your spending by adding new expenses here.</CardDescription>
+        <CardDescription>
+          {isEditing ? "Update the details of your expense." : "Track your spending by adding new expenses here."}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -111,7 +122,7 @@ export function ExpenseEntryForm({ onAddExpense }: ExpenseEntryFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a category" />
@@ -171,8 +182,14 @@ export function ExpenseEntryForm({ onAddExpense }: ExpenseEntryFormProps) {
               )}
             />
             <Button type="submit" className="w-full">
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Expense
+              {isEditing ? <Save className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+              {isEditing ? "Update Expense" : "Add Expense"}
             </Button>
+            {isEditing && (
+              <Button type="button" variant="outline" onClick={onCancelEdit} className="w-full">
+                Cancel Edit
+              </Button>
+            )}
           </form>
         </Form>
       </CardContent>
