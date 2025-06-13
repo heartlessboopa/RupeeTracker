@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CurrencyDisplay } from "@/components/common/CurrencyDisplay";
 import { format } from "date-fns";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,8 +23,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog"; // AlertDialogTrigger removed as it's not directly used here
 import {
   Dialog,
   DialogContent,
@@ -39,6 +38,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { ExportReportCard } from "./ExportReportCard";
+import { UserProfileCard } from "./UserProfileCard"; // Import UserProfileCard
 
 const initialExpensesData: Expense[] = [
   { id: '1', description: 'Lunch with team', amount: 1200, category: 'Food', date: new Date(2024, 6, 15).toISOString() },
@@ -65,7 +65,7 @@ type ActionType = 'edit' | 'delete';
 
 export default function DashboardPage() {
   const { toast } = useToast();
-  const { user } = useAuth(); // Get current user for password check
+  const { user } = useAuth(); 
   const [expenses, setExpenses] = React.useState<Expense[]>(() => 
     [...initialExpensesData].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   );
@@ -106,7 +106,7 @@ export default function DashboardPage() {
         description: `${data.description} for ₹${data.amount} added successfully.`,
       });
     }
-    setExpenseToEdit(null); // Reset editing state
+    setExpenseToEdit(null); 
   };
 
   const initiateEditExpense = (expense: Expense) => {
@@ -129,11 +129,10 @@ export default function DashboardPage() {
     }
     if (passwordToConfirm !== user.password) {
       toast({ title: "Incorrect Password", description: "The password you entered is incorrect.", variant: "destructive" });
-      setPasswordToConfirm(''); // Clear password field
+      setPasswordToConfirm(''); 
       return;
     }
 
-    // Password confirmed, proceed with action
     setShowPasswordConfirmDialog(false);
     setPasswordToConfirm('');
     
@@ -205,6 +204,10 @@ export default function DashboardPage() {
               onCancelEdit={handleCancelEdit}
             />
           </div>
+          <UserProfileCard 
+            expensesCount={expenses.length} 
+            budgetGoalsCount={budgetGoals.length} 
+          />
           <ExportReportCard expenses={expenses} />
         </div>
         <div className="lg:col-span-2 space-y-6">
