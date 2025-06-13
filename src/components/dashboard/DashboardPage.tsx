@@ -179,7 +179,7 @@ export default function DashboardPage() {
         <OverviewCard title="Top Category" value={topSpendingCategory} icon={<Star className="h-5 w-5" />} isCurrency={false} description="Your highest spending category."/>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
         <div className="lg:col-span-1 space-y-6">
           <div id="expense-form-card">
             <ExpenseEntryForm 
