@@ -1,21 +1,26 @@
 
 "use client";
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+// Removed static imports for jspdf and jspdf-autotable from here
 import type { Expense } from '@/types';
 import { format } from 'date-fns';
 
+// jsPDF and jsPDFAutoTable types are globally available or handled by tsconfig/globals,
+// but for the autoTable extension method, we still need to inform TypeScript.
+// The actual 'jspdf-autotable' import that patches jsPDF will be dynamic.
 declare module 'jspdf' {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
   }
 }
 
-export const generateExpenseReportPDF = (
+export const generateExpenseReportPDF = async (
   expenses: Expense[],
   reportTitle: string,
   filterDescription: string
 ) => {
+  const { default: jsPDF } = await import('jspdf');
+  await import('jspdf-autotable'); // This import executes the plugin
+
   const doc = new jsPDF();
 
   doc.setFontSize(18);
@@ -62,12 +67,11 @@ export const generateExpenseReportPDF = (
     },
     didDrawPage: (data) => {
       // Footer
-      const pageCount = doc.getNumberOfPages(); // Use getNumberOfPages() from jspdf
+      const pageCount = doc.getNumberOfPages(); 
       doc.setFontSize(10);
       doc.text(`Page ${data.pageNumber} of ${pageCount}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
       doc.text(`Report Generated: ${format(new Date(), "dd MMM, yyyy HH:mm")}`, doc.internal.pageSize.width - data.settings.margin.right, doc.internal.pageSize.height - 10, { align: 'right' });
     },
-    // Apply bold style to the last row (Total)
     willDrawCell: (data) => {
         if (data.row.index === tableRows.length - 1) {
             doc.setFont(undefined, 'bold');
@@ -77,3 +81,4 @@ export const generateExpenseReportPDF = (
   
   doc.save(`${reportTitle.toLowerCase().replace(/\s+/g, '_')}_report.pdf`);
 };
+

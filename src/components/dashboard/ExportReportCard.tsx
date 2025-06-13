@@ -83,8 +83,8 @@ export function ExportReportCard({ expenses }: ExportReportCardProps) {
 
   const selectedReportType = watch("reportType");
 
-  const onSubmit = (data: ExportFormValues) => {
-    let filteredExpenses = [...expenses]; // Create a copy to sort/filter
+  const onSubmit = async (data: ExportFormValues) => {
+    let filteredExpenses = [...expenses]; 
     let reportTitle = "Expense Report";
     let filterDescription = "";
     const now = new Date();
@@ -94,7 +94,7 @@ export function ExportReportCard({ expenses }: ExportReportCardProps) {
 
     switch (data.reportType) {
       case "current_week":
-        startDate = startOfWeek(now, { weekStartsOn: 1 }); // Monday
+        startDate = startOfWeek(now, { weekStartsOn: 1 }); 
         endDate = endOfWeek(now, { weekStartsOn: 1 });
         filterDescription = `For Current Week (${format(startDate, "dd MMM yyyy")} - ${format(endDate, "dd MMM yyyy")})`;
         reportTitle = "Weekly Expense Report";
@@ -121,11 +121,10 @@ export function ExportReportCard({ expenses }: ExportReportCardProps) {
       case "custom":
         if (data.startDate && data.endDate) {
           startDate = data.startDate;
-          endDate = new Date(data.endDate.getFullYear(), data.endDate.getMonth(), data.endDate.getDate(), 23, 59, 59, 999); // End of day
+          endDate = new Date(data.endDate.getFullYear(), data.endDate.getMonth(), data.endDate.getDate(), 23, 59, 59, 999); 
           filterDescription = `From ${format(startDate, "dd MMM yyyy")} to ${format(endDate, "dd MMM yyyy")}`;
           reportTitle = "Custom Range Expense Report";
         } else {
-          // This case should ideally be caught by form validation
           toast({ title: "Error", description: "Custom date range requires start and end dates.", variant: "destructive" });
           return;
         }
@@ -133,7 +132,7 @@ export function ExportReportCard({ expenses }: ExportReportCardProps) {
     }
 
     if (startDate && endDate) {
-      const finalStartDate = startDate; // To satisfy TypeScript non-nullability in filter
+      const finalStartDate = startDate; 
       const finalEndDate = endDate;
       filteredExpenses = filteredExpenses.filter(expense => {
         const expenseDate = new Date(expense.date);
@@ -141,7 +140,6 @@ export function ExportReportCard({ expenses }: ExportReportCardProps) {
       });
     }
     
-    // Sort expenses by date ascending for the report
     filteredExpenses.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
 
@@ -153,11 +151,20 @@ export function ExportReportCard({ expenses }: ExportReportCardProps) {
       return;
     }
 
-    generateExpenseReportPDF(filteredExpenses, reportTitle, filterDescription);
-    toast({
-        title: "Report Generated",
-        description: `${reportTitle} has been downloaded.`,
-    });
+    try {
+      await generateExpenseReportPDF(filteredExpenses, reportTitle, filterDescription);
+      toast({
+          title: "Report Generated",
+          description: `${reportTitle} has been downloaded.`,
+      });
+    } catch (error) {
+      console.error("Failed to generate PDF:", error);
+      toast({
+        title: "Error Generating Report",
+        description: "There was a problem generating the PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
