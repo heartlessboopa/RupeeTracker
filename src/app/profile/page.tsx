@@ -14,10 +14,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, KeyRound, DownloadCloud, ShieldCheck } from 'lucide-react';
+import { User, KeyRound, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { generateExpenseReportPDF } from '@/lib/pdfGenerator';
-import { initialExpensesData } from '@/data/initialData'; // Import initial expenses
 
 const changePasswordFormSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
@@ -71,32 +69,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handleExportAllData = async () => {
-    // For this prototype, 'Export All Data' uses the initialExpensesData.
-    // In a real app, this would fetch all user-specific data from a backend.
-    if (initialExpensesData.length === 0) {
-      toast({
-        title: "No Data",
-        description: "No expenses found in the initial dataset to export.",
-      });
-      return;
-    }
-    try {
-      await generateExpenseReportPDF(initialExpensesData, "Full Expense History Report", "All recorded expenses (snapshot)");
-      toast({
-          title: "Report Generated",
-          description: `Full Expense History Report has been downloaded.`,
-      });
-    } catch (error) {
-      console.error("Failed to generate PDF for all data:", error);
-      toast({
-        title: "Error Generating Report",
-        description: "There was a problem generating the PDF. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
 
   if (isLoading || !user) {
     return (
@@ -107,7 +79,7 @@ export default function ProfilePage() {
             <Skeleton className="h-12 w-1/3" />
             <Skeleton className="h-40 w-full rounded-lg" />
             <Skeleton className="h-56 w-full rounded-lg" />
-            <Skeleton className="h-32 w-full rounded-lg" />
+            {/* <Skeleton className="h-32 w-full rounded-lg" />  Removed skeleton for data export */}
           </div>
         </main>
         <footer className="text-center p-4 text-sm text-muted-foreground border-t">
@@ -211,24 +183,8 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          <Card className="shadow-lg border-border">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DownloadCloud className="h-5 w-5 text-primary" />
-                Data Export
-              </CardTitle>
-              <CardDescription>Download a copy of your financial data.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Export a snapshot of the initial expense dataset as a PDF. For detailed, period-based reports of your current expenses, please use the export feature on the Dashboard.
-              </p>
-              <Button onClick={handleExportAllData} variant="outline">
-                <DownloadCloud className="mr-2 h-4 w-4" />
-                Export All Data (Snapshot)
-              </Button>
-            </CardContent>
-          </Card>
+          {/* Data Export Card Removed */}
+
         </div>
       </main>
       <footer className="text-center p-4 text-sm text-muted-foreground border-t border-border">
