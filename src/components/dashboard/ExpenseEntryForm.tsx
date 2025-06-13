@@ -73,7 +73,21 @@ export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit }
   }, [editingExpense, form]);
 
   function onSubmit(values: ExpenseFormValues) {
+    const isNewExpense = !editingExpense; // Determine if it's an add operation
+    
     onSaveExpense(values, editingExpense ? editingExpense.id : undefined);
+
+    if (isNewExpense) {
+      // If a new expense was added, reset the form to its default empty state.
+      form.reset({
+        description: "",
+        amount: undefined, 
+        category: CATEGORIES[0], 
+        date: new Date(), 
+      });
+    }
+    // If it was an edit, the parent component (DashboardPage) will set editingExpense to null
+    // after save, which triggers the useEffect to reset the form.
   }
 
   return (
