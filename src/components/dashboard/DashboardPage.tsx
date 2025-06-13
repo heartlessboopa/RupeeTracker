@@ -42,7 +42,7 @@ export default function DashboardPage() {
   const [expenseToEdit, setExpenseToEdit] = React.useState<Expense | null>(null);
   
   const [showPasswordConfirmDialog, setShowPasswordConfirmDialog] = React.useState(false);
-  const [passwordToConfirm, setPasswordToConfirm] = React.useState('');
+  // const [passwordToConfirm, setPasswordToConfirm] = React.useState(''); // Password confirmation removed for now
   const [currentAction, setCurrentAction] = React.useState<ActionType | null>(null);
   const [selectedExpenseForAction, setSelectedExpenseForAction] = React.useState<Expense | null>(null);
   const [isSubmittingAction, setIsSubmittingAction] = React.useState(false);
@@ -55,15 +55,16 @@ export default function DashboardPage() {
         try {
           const fetchedExpenses = await expenseService.getExpenses(user.uid);
           setExpenses(fetchedExpenses);
-        } catch (error) {
-          console.error("Failed to load expenses:", error);
-          toast({ title: "Error", description: "Could not load expenses.", variant: "destructive" });
+        } catch (error: any) {
+          console.error("Failed to load expenses from Firestore:", error);
+          const errorMessage = error instanceof Error ? error.message : "Could not load expenses. Check console for details.";
+          toast({ title: "Error Loading Expenses", description: errorMessage, variant: "destructive" });
         } finally {
           setIsLoadingExpenses(false);
         }
       } else {
-        setExpenses([]); // Clear expenses if no user
-        setIsLoadingExpenses(false);
+        setExpenses([]); 
+        setIsLoadingExpenses(false); 
       }
     };
     fetchExpenses();
@@ -76,14 +77,15 @@ export default function DashboardPage() {
         return;
     }
     
-    setIsLoadingExpenses(true); // Indicate loading state
+    // For UI responsiveness, update state optimistically or use a dedicated submitting state for the form
+    // setIsLoadingExpenses(true); // This controls the whole dashboard loading, maybe too broad
     try {
         if (idToUpdate) {
         await expenseService.updateExpense(idToUpdate, data);
         setExpenses(prev => 
             prev.map(exp => 
             exp.id === idToUpdate 
-            ? { ...exp, ...data, date: data.date.toISOString(), amount: Number(data.amount) } 
+            ? { ...exp, ...data, date: new Date(data.date).toISOString(), amount: Number(data.amount) } 
             : exp
             ).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         );
@@ -101,11 +103,12 @@ export default function DashboardPage() {
             description: `${data.description} for ₹${data.amount} added successfully.`,
         });
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to save expense:", error);
-        toast({ title: "Save Failed", description: "Could not save the expense.", variant: "destructive" });
+        const errorMessage = error instanceof Error ? error.message : "Could not save the expense.";
+        toast({ title: "Save Failed", description: errorMessage, variant: "destructive" });
     } finally {
-        setIsLoadingExpenses(false);
+        // setIsLoadingExpenses(false); // Only if it was set true for this operation
         setExpenseToEdit(null); 
     }
   };
@@ -123,10 +126,6 @@ export default function DashboardPage() {
   };
 
   const handlePasswordConfirm = async () => {
-    // Password confirmation for edit/delete is removed as Firebase re-auth is per-action if needed
-    // For simplicity with Firestore, we'll proceed directly if user is authenticated.
-    // Sensitive operations on backend should enforce re-authentication if necessary.
-
     if (!user || !selectedExpenseForAction) {
       toast({ title: "Error", description: "User session error or no expense selected.", variant: "destructive" });
       setShowPasswordConfirmDialog(false);
@@ -134,7 +133,7 @@ export default function DashboardPage() {
     }
 
     setIsSubmittingAction(true);
-    setShowPasswordConfirmDialog(false); // Close dialog immediately
+    setShowPasswordConfirmDialog(false); 
     
     try {
         if (currentAction === 'edit' && selectedExpenseForAction) {
@@ -149,15 +148,15 @@ export default function DashboardPage() {
         toast({
             title: "Expense Deleted",
             description: `${selectedExpenseForAction!.description} deleted.`,
-            variant: "destructive"
         });
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error(`Failed to ${currentAction} expense:`, error);
-        toast({ title: `${currentAction === 'edit' ? 'Edit' : 'Delete'} Failed`, description: `Could not ${currentAction} the expense.`, variant: "destructive" });
+        const errorMessage = error instanceof Error ? error.message : `Could not ${currentAction} the expense.`;
+        toast({ title: `${currentAction === 'edit' ? 'Edit' : 'Delete'} Failed`, description: errorMessage, variant: "destructive" });
     } finally {
         setIsSubmittingAction(false);
-        setPasswordToConfirm(''); // Clear password field
+        // setPasswordToConfirm(''); 
         setSelectedExpenseForAction(null);
         setCurrentAction(null);
     }
@@ -165,7 +164,7 @@ export default function DashboardPage() {
   
   const handleCancelPasswordConfirm = () => {
     setShowPasswordConfirmDialog(false);
-    setPasswordToConfirm('');
+    // setPasswordToConfirm('');
     setSelectedExpenseForAction(null);
     setCurrentAction(null);
     setIsSubmittingAction(false);
@@ -189,7 +188,10 @@ export default function DashboardPage() {
     return Object.entries(spendingByCat).sort(([,a], [,b]) => b - a)[0]?.[0] || "N/A";
   }, [expenses]);
 
-  if (isLoadingExpenses && !user) { // Only show full page skeleton if user is also loading
+  // Initial loading state for the whole page (when user is not yet available or expenses are fetching for the first time)
+  // This skeleton is more for the overall page structure before user-specific content is ready.
+  // AuthContext isLoading handles initial user loading. `isLoadingExpenses` handles expense data loading.
+  if (isLoadingExpenses && expenses.length === 0) {
     return (
         <div className="flex-1 space-y-6 p-4 sm:p-6 md:p-8 items-start">
              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
@@ -223,7 +225,7 @@ export default function DashboardPage() {
             editingExpense={expenseToEdit}
             onCancelEdit={handleCancelEdit}
             className="h-full"
-            isSubmitting={isLoadingExpenses} // Pass loading state to disable form
+            isSubmitting={isSubmittingAction} 
           />
         </div>
         <div className="lg:col-span-2">
@@ -298,34 +300,13 @@ export default function DashboardPage() {
             </DialogTitle>
             <DialogDescription>
               Are you sure you want to {currentAction} the expense &quot;{selectedExpenseForAction?.description}&quot;?
-              {/* Password confirmation removed for simpler Firestore integration for now. 
-                  Re-authentication should be handled server-side or via Firebase rules for sensitive ops. */}
             </DialogDescription>
           </DialogHeader>
-          {/*
-          Password field removed for now. 
-          If re-auth is needed for these actions with Firebase, it's a more involved flow.
-          For this iteration, we assume authenticated user can perform these.
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="passwordConfirm">Password</Label>
-              <Input 
-                id="passwordConfirm" 
-                type="password" 
-                placeholder="Enter your password"
-                value={passwordToConfirm}
-                onChange={(e) => setPasswordToConfirm(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !isSubmittingAction) handlePasswordConfirm(); }}
-                disabled={isSubmittingAction}
-              />
-            </div>
-          </div>
-          */}
           <DialogFooter className="sm:justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={handleCancelPasswordConfirm} disabled={isSubmittingAction}>
                 Cancel
             </Button>
-            <Button type="button" onClick={handlePasswordConfirm} disabled={isSubmittingAction}>
+            <Button type="button" onClick={handlePasswordConfirm} disabled={isSubmittingAction} className={cn(currentAction === 'delete' && 'bg-destructive hover:bg-destructive/90')}>
               {isSubmittingAction ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Confirm {currentAction === 'edit' ? 'Edit' : 'Delete'}
             </Button>
@@ -335,3 +316,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
