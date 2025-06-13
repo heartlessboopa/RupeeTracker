@@ -7,10 +7,7 @@ export interface Expense {
   date: string; // ISO string for dates
 }
 
-export interface BudgetGoal {
-  category: string;
-  limit: number;
-}
+// BudgetGoal interface removed
 
 export const CATEGORIES = ['Food', 'Transport', 'Shopping', 'Utilities', 'Entertainment', 'Health', 'Education', 'Gifts', 'Rent', 'Savings', 'Other'] as const;
 export type Category = typeof CATEGORIES[number];

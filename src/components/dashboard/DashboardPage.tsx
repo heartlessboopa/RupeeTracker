@@ -2,12 +2,12 @@
 "use client";
 
 import * as React from 'react';
-import { IndianRupee, TrendingDown, PiggyBank, Star, ListChecks, Pencil, Trash2, ShieldCheck } from "lucide-react";
+import { IndianRupee, TrendingDown, Star, ListChecks, Pencil, Trash2, ShieldCheck } from "lucide-react"; // Removed PiggyBank
 import { OverviewCard } from "./OverviewCard";
 import { ExpenseEntryForm, type ExpenseFormValues } from "./ExpenseEntryForm";
 import { SpendingChart } from "./SpendingChart";
-import { BudgetGoalsCard } from "./BudgetGoalsCard";
-import type { Expense, BudgetGoal } from "@/types";
+// import { BudgetGoalsCard } from "./BudgetGoalsCard"; // Removed
+import type { Expense, Category } from "@/types"; // Removed BudgetGoal
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,7 +38,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { ExportReportCard } from "./ExportReportCard";
-import { UserProfileCard } from "./UserProfileCard";
+// import { UserProfileCard } from "./UserProfileCard"; // Removed
 
 const initialExpensesData: Expense[] = [
   { id: '1', description: 'Lunch with team', amount: 1200, category: 'Food', date: new Date(2024, 6, 15).toISOString() },
@@ -51,19 +51,7 @@ const initialExpensesData: Expense[] = [
   { id: '8', description: 'Mutual Fund SIP', amount: 5000, category: 'Savings', date: new Date(2024, 6, 5).toISOString() },
 ];
 
-const initialBudgetGoalsData: BudgetGoal[] = [
-  { category: 'Food', limit: 10000 },
-  { category: 'Transport', limit: 2000 },
-  { category: 'Shopping', limit: 5000 },
-  { category: 'Utilities', limit: 3000 },
-  { category: 'Entertainment', limit: 2000 },
-  { category: 'Health', limit: 2500 },
-  { category: 'Education', limit: 4000 },
-  { category: 'Gifts', limit: 1500 },
-  { category: 'Rent', limit: 25000 },
-  { category: 'Savings', limit: 10000 },
-  { category: 'Other', limit: 1000 },
-];
+// initialBudgetGoalsData removed
 
 type ActionType = 'edit' | 'delete';
 
@@ -73,7 +61,7 @@ export default function DashboardPage() {
   const [expenses, setExpenses] = React.useState<Expense[]>(() => 
     [...initialExpensesData].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   );
-  const [budgetGoals] = React.useState<BudgetGoal[]>(initialBudgetGoalsData);
+  // budgetGoals state removed
   const [expenseToEdit, setExpenseToEdit] = React.useState<Expense | null>(null);
   
   const [showPasswordConfirmDialog, setShowPasswordConfirmDialog] = React.useState(false);
@@ -175,11 +163,7 @@ export default function DashboardPage() {
     return expenses.reduce((sum, exp) => sum + exp.amount, 0);
   }, [expenses]);
 
-  const totalBudget = React.useMemo(() => {
-    return budgetGoals.reduce((sum, goal) => sum + goal.limit, 0);
-  }, [budgetGoals]);
-
-  const remainingBudget = totalBudget - totalSpent;
+  // totalBudget and remainingBudget removed
 
   const topSpendingCategory = React.useMemo(() => {
     if (expenses.length === 0) return "N/A";
@@ -192,10 +176,9 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-1 space-y-6 p-4 sm:p-6 md:p-8">
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2"> {/* Changed to lg:grid-cols-2 from lg:grid-cols-4 */}
         <OverviewCard title="Total Spent" value={totalSpent} icon={<TrendingDown className="h-5 w-5" />} description="Total amount spent this period." />
-        <OverviewCard title="Total Budget" value={totalBudget} icon={<PiggyBank className="h-5 w-5" />} description="Your total budget for all categories." />
-        <OverviewCard title="Remaining Budget" value={remainingBudget} icon={<IndianRupee className="h-5 w-5" />} description={remainingBudget >=0 ? "Amount left to spend." : "You are over budget."} />
+        {/* Removed Total Budget and Remaining Budget OverviewCards */}
         <OverviewCard title="Top Category" value={topSpendingCategory} icon={<Star className="h-5 w-5" />} isCurrency={false} description="Your highest spending category."/>
       </div>
 
@@ -208,15 +191,12 @@ export default function DashboardPage() {
               onCancelEdit={handleCancelEdit}
             />
           </div>
-          <UserProfileCard 
-            expensesCount={expenses.length} 
-            budgetGoalsCount={budgetGoals.length} 
-          />
+          {/* UserProfileCard removed */}
           <ExportReportCard expenses={expenses} />
         </div>
         <div className="lg:col-span-2 space-y-6">
           <SpendingChart expenses={expenses} />
-          <BudgetGoalsCard budgets={budgetGoals} expenses={expenses} />
+          {/* BudgetGoalsCard removed */}
         </div>
       </div>
 
