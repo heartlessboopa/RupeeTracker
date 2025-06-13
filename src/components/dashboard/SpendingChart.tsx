@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { BarChart3 } from "lucide-react"; // Changed from PieChart
+import { BarChart3 } from "lucide-react"; 
 import {
   BarChart,
   Bar,
@@ -12,13 +12,13 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  Cell, // Added Cell import
+  Cell,
 } from "recharts";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Expense, Category } from "@/types";
 import { CATEGORIES } from "@/types";
-import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
+import { ChartConfig, ChartContainer } from "@/components/ui/chart"; // Removed ChartTooltipContent as Tooltip is customized directly
 import { CurrencyDisplay } from "@/components/common/CurrencyDisplay";
 
 interface SpendingChartProps {
@@ -31,13 +31,46 @@ const chartColors = [
   "hsl(var(--chart-3))",
   "hsl(var(--chart-4))",
   "hsl(var(--chart-5))",
-  "hsl(200, 70%, 50%)", // Additional distinct colors
+  "hsl(200, 70%, 50%)", 
   "hsl(50, 70%, 50%)",
   "hsl(270, 70%, 50%)",
   "hsl(120, 70%, 50%)",
   "hsl(0, 70%, 50%)", 
   "hsl(180, 70%, 50%)",
 ];
+
+const CustomizedXAxisTick = (props: any) => {
+  const { x, y, payload } = props;
+  const MAX_TICK_WIDTH = 65; // Max width for a tick label in pixels before truncating
+  const TEXT_OFFSET_Y = 5;   // Offset below the axis line for the text to start
+
+  if (!payload || typeof payload.value === 'undefined') {
+    return null;
+  }
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <foreignObject x={-(MAX_TICK_WIDTH / 2)} y={TEXT_OFFSET_Y} width={MAX_TICK_WIDTH} height={22}>
+        <div
+          xmlns="http://www.w3.org/1999/xhtml"
+          style={{
+            width: `${MAX_TICK_WIDTH}px`,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            textAlign: 'center',
+            fontSize: '12px',
+            lineHeight: '1.2',
+            color: 'hsl(var(--muted-foreground))',
+          }}
+          title={payload.value} // Show full category name on hover
+        >
+          {payload.value}
+        </div>
+      </foreignObject>
+    </g>
+  );
+};
 
 export function SpendingChart({ expenses }: SpendingChartProps) {
   const [mounted, setMounted] = React.useState(false);
@@ -51,14 +84,13 @@ export function SpendingChart({ expenses }: SpendingChartProps) {
     for (const expense of expenses) {
       aggregated[expense.category] = (aggregated[expense.category] || 0) + expense.amount;
     }
-    // Sort categories alphabetically for consistent bar order, or by value if preferred
     return Object.entries(aggregated)
       .map(([name, value]) => ({ 
         name, 
-        amount: value, // Renamed 'value' to 'amount' for clarity with BarChart dataKey
+        amount: value,
         fill: chartColors[CATEGORIES.indexOf(name as Category) % chartColors.length] 
       }))
-      .sort((a, b) => a.name.localeCompare(b.name)); // Optional: sort for consistent order
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [expenses]);
 
   const chartConfig = React.useMemo(() => {
@@ -69,10 +101,8 @@ export function SpendingChart({ expenses }: SpendingChartProps) {
         color: chartColors[index % chartColors.length],
       };
     });
-    // Add a specific config for the 'amount' dataKey in the BarChart
     config.amount = {
         label: "Amount",
-        // Color here can be a default or might not be used if bars are colored by category directly
     };
     return config;
   }, []);
@@ -111,15 +141,16 @@ export function SpendingChart({ expenses }: SpendingChartProps) {
         ) : (
           <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
             <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={dataByCategory} margin={{ top: 5, right: 20, left: 10, bottom: 50 }}>
+              <BarChart 
+                data={dataByCategory} 
+                margin={{ top: 5, right: 20, left: 10, bottom: 25 }} // Adjusted bottom margin
+              >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis 
                   dataKey="name" 
-                  angle={-45} 
-                  textAnchor="end" 
-                  height={60}
+                  height={40} // Adjusted height for non-rotated labels
                   interval={0}
-                  tick={{ fontSize: 12 }}
+                  tick={<CustomizedXAxisTick />}
                 />
                 <YAxis 
                   tickFormatter={(value) => `₹${value / 1000}k`} 
@@ -146,7 +177,7 @@ export function SpendingChart({ expenses }: SpendingChartProps) {
                   wrapperStyle={{ paddingBottom: '10px' }}
                   formatter={(value, entry) => {
                     const { color } = entry;
-                    const category = value as Category; // 'amount' bar is colored by its fill property
+                    const category = value as Category; 
                     return <span style={{ color }}>{chartConfig[category]?.label || category}</span>;
                   }}
                 />
