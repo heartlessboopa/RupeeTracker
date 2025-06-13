@@ -19,6 +19,7 @@ interface AuthContextType {
   login: (email: string, passwordAttempt: string) => boolean;
   logout: () => void;
   register: (email: string, passwordAttempt: string) => boolean;
+  changePassword: (currentUserEmail: string, currentPasswordAttempt: string, newPasswordVal: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,8 +91,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   }, [getUsersList, saveUsersList]);
 
+  const changePassword = useCallback((currentUserEmail: string, currentPasswordAttempt: string, newPasswordVal: string): boolean => {
+    const users = getUsersList();
+    const userIndex = users.findIndex(u => u.email === currentUserEmail);
+
+    if (userIndex === -1) {
+      return false; // User not found
+    }
+
+    if (users[userIndex].password !== currentPasswordAttempt) {
+      return false; // Current password incorrect
+    }
+
+    users[userIndex].password = newPasswordVal;
+    saveUsersList(users);
+
+    // Update current user session if it's the logged-in user
+    if (user && user.email === currentUserEmail) {
+      const updatedUser = { ...user, password: newPasswordVal };
+      localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(updatedUser));
+      setUser(updatedUser);
+    }
+    return true;
+  }, [getUsersList, saveUsersList, user]);
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, register }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, register, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

@@ -2,28 +2,17 @@
 "use client";
 
 import * as React from 'react';
-import { IndianRupee, TrendingDown, Star, ListChecks, Pencil, Trash2, ShieldCheck } from "lucide-react"; // Removed PiggyBank
+import { IndianRupee, TrendingDown, Star, ListChecks, Pencil, Trash2, ShieldCheck, BarChart3 } from "lucide-react"; // Changed PieChart to BarChart3
 import { OverviewCard } from "./OverviewCard";
 import { ExpenseEntryForm, type ExpenseFormValues } from "./ExpenseEntryForm";
 import { SpendingChart } from "./SpendingChart";
-// import { BudgetGoalsCard } from "./BudgetGoalsCard"; // Removed
-import type { Expense, Category } from "@/types"; // Removed BudgetGoal
+import type { Expense, Category } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CurrencyDisplay } from "@/components/common/CurrencyDisplay";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -38,20 +27,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { ExportReportCard } from "./ExportReportCard";
-// import { UserProfileCard } from "./UserProfileCard"; // Removed
-
-const initialExpensesData: Expense[] = [
-  { id: '1', description: 'Lunch with team', amount: 1200, category: 'Food', date: new Date(2024, 6, 15).toISOString() },
-  { id: '2', description: 'Monthly metro pass', amount: 500, category: 'Transport', date: new Date(2024, 6, 1).toISOString() },
-  { id: '3', description: 'New headphones', amount: 2500, category: 'Shopping', date: new Date(2024, 6, 10).toISOString() },
-  { id: '4', description: 'Electricity Bill', amount: 800, category: 'Utilities', date: new Date(2024, 6, 5).toISOString() },
-  { id: '5', description: 'Movie tickets', amount: 600, category: 'Entertainment', date: new Date(2024, 6, 20).toISOString() },
-  { id: '6', description: 'Groceries', amount: 3000, category: 'Food', date: new Date(2024, 6, 22).toISOString() },
-  { id: '7', description: 'Apartment Rent', amount: 20000, category: 'Rent', date: new Date(2024, 6, 1).toISOString() },
-  { id: '8', description: 'Mutual Fund SIP', amount: 5000, category: 'Savings', date: new Date(2024, 6, 5).toISOString() },
-];
-
-// initialBudgetGoalsData removed
+import { initialExpensesData } from '@/data/initialData'; // Import initial expenses
 
 type ActionType = 'edit' | 'delete';
 
@@ -61,7 +37,6 @@ export default function DashboardPage() {
   const [expenses, setExpenses] = React.useState<Expense[]>(() => 
     [...initialExpensesData].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   );
-  // budgetGoals state removed
   const [expenseToEdit, setExpenseToEdit] = React.useState<Expense | null>(null);
   
   const [showPasswordConfirmDialog, setShowPasswordConfirmDialog] = React.useState(false);
@@ -163,8 +138,6 @@ export default function DashboardPage() {
     return expenses.reduce((sum, exp) => sum + exp.amount, 0);
   }, [expenses]);
 
-  // totalBudget and remainingBudget removed
-
   const topSpendingCategory = React.useMemo(() => {
     if (expenses.length === 0) return "N/A";
     const spendingByCat: Record<string, number> = {};
@@ -176,9 +149,8 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-1 space-y-6 p-4 sm:p-6 md:p-8">
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2"> {/* Changed to lg:grid-cols-2 from lg:grid-cols-4 */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
         <OverviewCard title="Total Spent" value={totalSpent} icon={<TrendingDown className="h-5 w-5" />} description="Total amount spent this period." />
-        {/* Removed Total Budget and Remaining Budget OverviewCards */}
         <OverviewCard title="Top Category" value={topSpendingCategory} icon={<Star className="h-5 w-5" />} isCurrency={false} description="Your highest spending category."/>
       </div>
 
@@ -191,12 +163,11 @@ export default function DashboardPage() {
               onCancelEdit={handleCancelEdit}
             />
           </div>
-          {/* UserProfileCard removed */}
           <ExportReportCard expenses={expenses} />
         </div>
         <div className="lg:col-span-2 space-y-6">
+          {/* The icon in SpendingChart card header is updated internally in SpendingChart.tsx */}
           <SpendingChart expenses={expenses} />
-          {/* BudgetGoalsCard removed */}
         </div>
       </div>
 
@@ -287,3 +258,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

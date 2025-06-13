@@ -3,24 +3,100 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
 import { Header } from "@/components/layout/Header";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, KeyRound, DownloadCloud } from 'lucide-react'; // Changed Download to DownloadCloud for variety
+import { User, KeyRound, DownloadCloud, ShieldCheck } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { generateExpenseReportPDF } from '@/lib/pdfGenerator';
+import { initialExpensesData } from '@/data/initialData'; // Import initial expenses
+
+const changePasswordFormSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters'),
+  confirmNewPassword: z.string(),
+}).refine(data => data.newPassword === data.confirmNewPassword, {
+  message: "New passwords don't match",
+  path: ['confirmNewPassword'],
+});
+
+type ChangePasswordFormValues = z.infer<typeof changePasswordFormSchema>;
 
 export default function ProfilePage() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, changePassword } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
+
+  const form = useForm<ChangePasswordFormValues>({
+    resolver: zodResolver(changePasswordFormSchema),
+    defaultValues: {
+      currentPassword: '',
+      newPassword: '',
+      confirmNewPassword: '',
+    },
+  });
 
   React.useEffect(() => {
     if (!isLoading && !user) {
       router.replace('/login');
     }
   }, [user, isLoading, router]);
+
+  const onSubmitChangePassword = (data: ChangePasswordFormValues) => {
+    if (!user) {
+      toast({ title: "Error", description: "You are not logged in.", variant: "destructive" });
+      return;
+    }
+    const success = changePassword(user.email, data.currentPassword, data.newPassword);
+    if (success) {
+      toast({ title: 'Password Changed', description: 'Your password has been updated successfully.' });
+      form.reset();
+    } else {
+      toast({
+        title: 'Password Change Failed',
+        description: 'Incorrect current password or an error occurred.',
+        variant: 'destructive',
+      });
+      form.resetField('currentPassword');
+      form.setValue('newPassword', '');
+      form.setValue('confirmNewPassword', '');
+    }
+  };
+
+  const handleExportAllData = async () => {
+    // For this prototype, 'Export All Data' uses the initialExpensesData.
+    // In a real app, this would fetch all user-specific data from a backend.
+    if (initialExpensesData.length === 0) {
+      toast({
+        title: "No Data",
+        description: "No expenses found in the initial dataset to export.",
+      });
+      return;
+    }
+    try {
+      await generateExpenseReportPDF(initialExpensesData, "Full Expense History Report", "All recorded expenses (snapshot)");
+      toast({
+          title: "Report Generated",
+          description: `Full Expense History Report has been downloaded.`,
+      });
+    } catch (error) {
+      console.error("Failed to generate PDF for all data:", error);
+      toast({
+        title: "Error Generating Report",
+        description: "There was a problem generating the PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
 
   if (isLoading || !user) {
     return (
@@ -84,17 +160,54 @@ export default function ProfilePage() {
               </CardTitle>
               <CardDescription>Update your account password for enhanced security.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* 
-              This section is a placeholder for future password change functionality.
-              It would typically involve a form with fields for current password, 
-              new password, and confirm new password, along with a submit button.
-              Logic in AuthContext would handle the password update.
-              */}
-              <p className="text-sm text-muted-foreground italic">
-                Password change functionality is planned for a future update. For now, this feature is not implemented.
-              </p>
-              <Button disabled variant="outline">Update Password</Button>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmitChangePassword)} className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="currentPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Current Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="newPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>New Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="confirmNewPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm New Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full sm:w-auto" disabled={form.formState.isSubmitting}>
+                     <ShieldCheck className="mr-2 h-4 w-4" />
+                    {form.formState.isSubmitting ? 'Updating...' : 'Update Password'}
+                  </Button>
+                </form>
+              </Form>
             </CardContent>
           </Card>
 
@@ -106,16 +219,14 @@ export default function ProfilePage() {
               </CardTitle>
               <CardDescription>Download a copy of your financial data.</CardDescription>
             </CardHeader>
-            <CardContent>
-              {/* 
-              This section is a placeholder for future data export functionality.
-              It might include options for different formats (e.g., JSON, CSV) 
-              or date ranges.
-              */}
-              <p className="text-sm text-muted-foreground italic">
-                Data export functionality is planned for a future update. For now, this feature is not implemented.
+            <CardContent className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Export a snapshot of the initial expense dataset as a PDF. For detailed, period-based reports of your current expenses, please use the export feature on the Dashboard.
               </p>
-              <Button disabled variant="outline">Export All Data</Button>
+              <Button onClick={handleExportAllData} variant="outline">
+                <DownloadCloud className="mr-2 h-4 w-4" />
+                Export All Data (Snapshot)
+              </Button>
             </CardContent>
           </Card>
         </div>
