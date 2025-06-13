@@ -6,9 +6,10 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { useRouter } from 'next/navigation';
 import { authService } from '@/services/authService';
 import { expenseService } from '@/services/expenseService';
-import type { AppUser } from '@/types'; // Using AppUser from central types
+import type { AppUser } from '@/types';
 import type { LoginCredentials, RegisterCredentials } from '@/types/auth';
 import { useToast } from '@/hooks/use-toast';
+import type { AuthError } from 'firebase/auth';
 
 interface AuthContextType {
   user: AppUser | null;
@@ -22,6 +23,34 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const getFirebaseAuthErrorMessage = (error: any): string => {
+  const firebaseError = error as AuthError;
+  if (firebaseError && firebaseError.code) {
+    switch (firebaseError.code) {
+      case 'auth/invalid-email':
+        return 'The email address is not valid.';
+      case 'auth/user-disabled':
+        return 'This user account has been disabled.';
+      case 'auth/user-not-found':
+        return 'No user found with this email. Please check the email or register.';
+      case 'auth/wrong-password':
+        return 'Incorrect password. Please try again.';
+      case 'auth/email-already-in-use':
+        return 'This email address is already in use by another account.';
+      case 'auth/weak-password':
+        return 'The password is too weak. Please choose a stronger password (at least 6 characters).';
+      case 'auth/operation-not-allowed':
+        return 'Email/Password sign-in is not enabled for this app. Please contact support.';
+      case 'auth/invalid-credential':
+         return 'Invalid credentials. Please check your email and password.';
+      default:
+        return firebaseError.message || 'An unexpected authentication error occurred.';
+    }
+  }
+  return error.message || 'An unexpected error occurred during authentication.';
+};
+
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,24 +62,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = authService.onAuthUserChanged((authUser) => {
       setUser(authUser);
       setIsLoading(false);
-      if (!authUser && !['/login', '/register'].includes(window.location.pathname)) {
-         // router.replace('/login'); // Handled by ProtectedHomePage now
-      }
     });
     return () => unsubscribe(); // Cleanup subscription on unmount
-  }, [router]);
+  }, []);
 
   const login = useCallback(async (credentials: LoginCredentials): Promise<boolean> => {
     setIsLoading(true);
     try {
       const loggedInUser = await authService.loginUser({email: credentials.email, password: credentials.passwordAttempt});
-      setUser(loggedInUser); // Set user from authService response
+      setUser(loggedInUser);
       setIsLoading(false);
       return true;
     } catch (error: any) {
       console.error("Login failed in context:", error);
       setIsLoading(false);
-      toast({ title: "Login Failed", description: error.message || "Invalid email or password.", variant: "destructive" });
+      toast({ title: "Login Failed", description: getFirebaseAuthErrorMessage(error), variant: "destructive" });
       return false;
     }
   }, [toast]);
@@ -60,10 +86,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await authService.logoutUser();
       setUser(null);
-      router.push('/login'); // Explicitly redirect after logout
+      router.push('/login'); 
     } catch (error: any) {
       console.error("Logout failed:", error);
-      toast({ title: "Logout Failed", description: error.message || "Could not log out.", variant: "destructive" });
+      toast({ title: "Logout Failed", description: getFirebaseAuthErrorMessage(error), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -73,13 +99,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       await authService.registerUser({email: credentials.email, password: credentials.passwordAttempt});
-      // Don't auto-login, user will be redirected to login page after successful registration message
       setIsLoading(false);
       return true;
     } catch (error: any) {
       console.error("Registration failed in context:", error);
       setIsLoading(false);
-      toast({ title: "Registration Failed", description: error.message || "Could not register user.", variant: "destructive" });
+      toast({ title: "Registration Failed", description: getFirebaseAuthErrorMessage(error), variant: "destructive" });
       return false;
     }
   }, [toast]);
@@ -97,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return true;
     } catch (error: any) {
       console.error("Password change failed:", error);
-      toast({ title: 'Password Change Failed', description: error.message || "An error occurred.", variant: 'destructive' });
+      toast({ title: 'Password Change Failed', description: getFirebaseAuthErrorMessage(error), variant: 'destructive' });
       setIsLoading(false);
       return false;
     }
@@ -110,17 +135,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setIsLoading(true);
     try {
-      // Step 1: Delete all expenses for the user from Firestore
       await expenseService.deleteAllUserExpenses(user.uid);
-      toast({ title: "Expenses Cleared", description: "Your expense data has been deleted." });
+      // Toast for expense deletion handled within expenseService or could be added here
+      // toast({ title: "Expenses Cleared", description: "Your expense data has been deleted." });
 
-      // Step 2: Delete the user account from Firebase Auth
-      // This will also effectively log them out
       await authService.deleteCurrentUserAccount(currentPasswordAttempt);
-      toast({ title: "Account Deleted", description: "Your account has been successfully deleted." });
+      toast({ title: "Account Deleted", description: "Your account and associated data have been successfully deleted." });
       
-      setUser(null); // Clear local user state
-      router.push('/register'); // Redirect to register or login after account deletion
+      setUser(null); 
+      router.push('/register'); 
       setIsLoading(false);
       return true;
 
@@ -128,14 +151,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("Failed to clear all application data:", error);
       toast({
         title: "Operation Failed",
-        description: error.message || "Could not clear all data. Your account might still exist if only expenses failed to delete.",
+        description: getFirebaseAuthErrorMessage(error),
         variant: "destructive"
       });
       setIsLoading(false);
-      // If account deletion failed due to wrong password, user is still logged in.
-      // If expenses were deleted but account deletion failed, user is still logged in.
-      // Re-fetch user to ensure state consistency if needed, or rely on onAuthStateChanged.
-      // For now, we assume if deleteCurrentUserAccount throws, the user is still effectively logged in (session wise).
       return false;
     }
   }, [user, router, toast]);
@@ -154,3 +173,4 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+
