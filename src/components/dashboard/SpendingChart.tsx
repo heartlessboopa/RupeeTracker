@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { BarChart3 } from "lucide-react"; 
+import { BarChart3, TrendingDown, TrendingUp } from "lucide-react"; 
 import {
   BarChart,
   Bar,
@@ -18,11 +18,13 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Expense, Category } from "@/types";
 import { CATEGORIES } from "@/types";
-import { ChartConfig, ChartContainer } from "@/components/ui/chart"; // Removed ChartTooltipContent as Tooltip is customized directly
+import { ChartConfig, ChartContainer } from "@/components/ui/chart"; 
 import { CurrencyDisplay } from "@/components/common/CurrencyDisplay";
+import { cn } from "@/lib/utils";
 
 interface SpendingChartProps {
   expenses: Expense[];
+  className?: string;
 }
 
 const chartColors = [
@@ -41,8 +43,8 @@ const chartColors = [
 
 const CustomizedXAxisTick = (props: any) => {
   const { x, y, payload } = props;
-  const MAX_TICK_WIDTH = 65; // Max width for a tick label in pixels before truncating
-  const TEXT_OFFSET_Y = 5;   // Offset below the axis line for the text to start
+  const MAX_TICK_WIDTH = 65; 
+  const TEXT_OFFSET_Y = 5;   
 
   if (!payload || typeof payload.value === 'undefined') {
     return null;
@@ -63,7 +65,7 @@ const CustomizedXAxisTick = (props: any) => {
             lineHeight: '1.2',
             color: 'hsl(var(--muted-foreground))',
           }}
-          title={payload.value} // Show full category name on hover
+          title={payload.value} 
         >
           {payload.value}
         </div>
@@ -72,7 +74,7 @@ const CustomizedXAxisTick = (props: any) => {
   );
 };
 
-export function SpendingChart({ expenses }: SpendingChartProps) {
+export function SpendingChart({ expenses, className }: SpendingChartProps) {
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -109,7 +111,7 @@ export function SpendingChart({ expenses }: SpendingChartProps) {
 
   if (!mounted) {
     return (
-      <Card className="shadow-lg">
+      <Card className={cn("shadow-lg", className)}>
         <CardHeader>
           <CardTitle className="font-headline flex items-center gap-2">
             <BarChart3 className="h-6 w-6 text-primary" />
@@ -125,7 +127,7 @@ export function SpendingChart({ expenses }: SpendingChartProps) {
   }
 
   return (
-    <Card className="shadow-lg">
+    <Card className={cn("shadow-lg", className)}>
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2">
           <BarChart3 className="h-6 w-6 text-primary" />
@@ -143,12 +145,12 @@ export function SpendingChart({ expenses }: SpendingChartProps) {
             <ResponsiveContainer width="100%" height={350}>
               <BarChart 
                 data={dataByCategory} 
-                margin={{ top: 5, right: 20, left: 10, bottom: 25 }} // Adjusted bottom margin
+                margin={{ top: 5, right: 20, left: 10, bottom: 25 }} 
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis 
                   dataKey="name" 
-                  height={40} // Adjusted height for non-rotated labels
+                  height={40} 
                   interval={0}
                   tick={<CustomizedXAxisTick />}
                 />

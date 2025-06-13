@@ -42,17 +42,14 @@ export default function DashboardPage() {
         const storedExpenses = localStorage.getItem(LOCAL_STORAGE_EXPENSES_KEY);
         if (storedExpenses) {
           const parsedExpenses: Expense[] = JSON.parse(storedExpenses);
-          // Ensure dates are valid and sort
           return parsedExpenses
             .filter(exp => exp.date && !isNaN(new Date(exp.date).getTime())) 
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         }
       } catch (error) {
         console.error("Failed to load expenses from localStorage", error);
-        // Fall through to initial data if localStorage fails
       }
     }
-    // Fallback to initial data, sorted
     return [...initialExpensesData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   });
 
@@ -179,21 +176,26 @@ export default function DashboardPage() {
         <OverviewCard title="Top Category" value={topSpendingCategory} icon={<Star className="h-5 w-5" />} isCurrency={false} description="Your highest spending category."/>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
-        <div className="lg:col-span-1 space-y-6">
-          <div id="expense-form-card">
-            <ExpenseEntryForm 
-              onSaveExpense={handleSaveExpense} 
-              editingExpense={expenseToEdit}
-              onCancelEdit={handleCancelEdit}
-            />
-          </div>
-          <ExportReportCard expenses={expenses} />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-stretch">
+        <div className="lg:col-span-1" id="expense-form-card">
+          <ExpenseEntryForm 
+            onSaveExpense={handleSaveExpense} 
+            editingExpense={expenseToEdit}
+            onCancelEdit={handleCancelEdit}
+            className="h-full"
+          />
         </div>
-        <div className="lg:col-span-2 space-y-6">
-          <SpendingChart expenses={expenses} />
+        <div className="lg:col-span-2">
+          <SpendingChart expenses={expenses} className="h-full" />
         </div>
       </div>
+      
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-1">
+          <ExportReportCard expenses={expenses} />
+        </div>
+      </div>
+
 
       <Card className="shadow-lg">
         <CardHeader>

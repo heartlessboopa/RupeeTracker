@@ -39,9 +39,10 @@ interface ExpenseEntryFormProps {
   onSaveExpense: (data: ExpenseFormValues, idToUpdate?: string) => void;
   editingExpense: Expense | null;
   onCancelEdit: () => void;
+  className?: string;
 }
 
-export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit }: ExpenseEntryFormProps) {
+export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit, className }: ExpenseEntryFormProps) {
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -73,12 +74,11 @@ export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit }
   }, [editingExpense, form]);
 
   function onSubmit(values: ExpenseFormValues) {
-    const isNewExpense = !editingExpense; // Determine if it's an add operation
+    const isNewExpense = !editingExpense; 
     
     onSaveExpense(values, editingExpense ? editingExpense.id : undefined);
 
     if (isNewExpense) {
-      // If a new expense was added, reset the form to its default empty state.
       form.reset({
         description: "",
         amount: undefined, 
@@ -86,12 +86,10 @@ export function ExpenseEntryForm({ onSaveExpense, editingExpense, onCancelEdit }
         date: new Date(), 
       });
     }
-    // If it was an edit, the parent component (DashboardPage) will set editingExpense to null
-    // after save, which triggers the useEffect to reset the form.
   }
 
   return (
-    <Card className="shadow-lg">
+    <Card className={cn("shadow-lg", className)}>
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2">
           {isEditing ? <Pencil className="h-6 w-6 text-primary" /> : <PlusCircle className="h-6 w-6 text-primary" />}
