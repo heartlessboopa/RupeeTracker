@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { DollarSign, TrendingDown, PiggyBank, Star, ListChecks, Pencil, Trash2 } from "lucide-react";
+import { IndianRupee, TrendingDown, PiggyBank, Star, ListChecks, Pencil, Trash2 } from "lucide-react";
 import { OverviewCard } from "./OverviewCard";
 import { ExpenseEntryForm, type ExpenseFormValues } from "./ExpenseEntryForm";
 import { SpendingChart } from "./SpendingChart";
@@ -144,7 +144,7 @@ export default function DashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <OverviewCard title="Total Spent" value={totalSpent} icon={<TrendingDown className="h-5 w-5" />} description="Total amount spent this period." />
         <OverviewCard title="Total Budget" value={totalBudget} icon={<PiggyBank className="h-5 w-5" />} description="Your total budget for all categories." />
-        <OverviewCard title="Remaining Budget" value={remainingBudget} icon={<DollarSign className="h-5 w-5" />} description={remainingBudget >=0 ? "Amount left to spend." : "You are over budget."} />
+        <OverviewCard title="Remaining Budget" value={remainingBudget} icon={<IndianRupee className="h-5 w-5" />} description={remainingBudget >=0 ? "Amount left to spend." : "You are over budget."} />
         <OverviewCard title="Top Category" value={topSpendingCategory} icon={<Star className="h-5 w-5" />} isCurrency={false} description="Your highest spending category."/>
       </div>
 
