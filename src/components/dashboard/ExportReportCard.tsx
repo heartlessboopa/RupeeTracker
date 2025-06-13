@@ -97,7 +97,7 @@ export function ExportReportCard({ expenses, className }: ExportReportCardProps)
       case "current_week":
         startDate = startOfWeek(now, { weekStartsOn: 1 }); 
         endDate = endOfWeek(now, { weekStartsOn: 1 });
-        filterDescription = `For Current Week (${format(startDate, "dd MMM yyyy")} - ${format(endDate, "dd MMM yyyy")})`;
+        filterDescription = `For Current Week (${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")})`;
         reportTitle = "Weekly Expense Report";
         break;
       case "current_month":
@@ -123,7 +123,7 @@ export function ExportReportCard({ expenses, className }: ExportReportCardProps)
         if (data.startDate && data.endDate) {
           startDate = data.startDate;
           endDate = new Date(data.endDate.getFullYear(), data.endDate.getMonth(), data.endDate.getDate(), 23, 59, 59, 999); 
-          filterDescription = `From ${format(startDate, "dd MMM yyyy")} to ${format(endDate, "dd MMM yyyy")}`;
+          filterDescription = `From ${format(startDate, "dd/MM/yyyy")} to ${format(endDate, "dd/MM/yyyy")}`;
           reportTitle = "Custom Range Expense Report";
         } else {
           toast({ title: "Error", description: "Custom date range requires start and end dates.", variant: "destructive" });
@@ -221,7 +221,7 @@ export function ExportReportCard({ expenses, className }: ExportReportCardProps)
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                            {field.value ? format(field.value, "dd/MM/yyyy") : <span>Pick a date</span>}
                           </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -256,7 +256,7 @@ export function ExportReportCard({ expenses, className }: ExportReportCardProps)
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                            {field.value ? format(field.value, "dd/MM/yyyy") : <span>Pick a date</span>}
                           </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
