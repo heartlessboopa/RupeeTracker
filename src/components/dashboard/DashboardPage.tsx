@@ -25,6 +25,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { ExportReportCard } from "./ExportReportCard";
+
 
 const initialExpensesData: Expense[] = [
   { id: '1', description: 'Lunch with team', amount: 1200, category: 'Food', date: new Date(2024, 6, 15).toISOString() },
@@ -91,8 +93,7 @@ export default function DashboardPage() {
 
   const handleEditExpense = (expense: Expense) => {
     setExpenseToEdit(expense);
-    // Optionally scroll to form
-    const formElement = document.getElementById("expense-form-card"); // Assuming card has this id or use a ref
+    const formElement = document.getElementById("expense-form-card"); 
     if (formElement) {
         formElement.scrollIntoView({ behavior: "smooth" });
     }
@@ -149,12 +150,15 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-1" id="expense-form-card">
-          <ExpenseEntryForm 
-            onSaveExpense={handleSaveExpense} 
-            editingExpense={expenseToEdit}
-            onCancelEdit={handleCancelEdit}
-          />
+        <div className="lg:col-span-1 space-y-6">
+          <div id="expense-form-card">
+            <ExpenseEntryForm 
+              onSaveExpense={handleSaveExpense} 
+              editingExpense={expenseToEdit}
+              onCancelEdit={handleCancelEdit}
+            />
+          </div>
+          <ExportReportCard expenses={expenses} />
         </div>
         <div className="lg:col-span-2 space-y-6">
           <SpendingChart expenses={expenses} />
@@ -234,4 +238,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
