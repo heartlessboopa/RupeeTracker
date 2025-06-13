@@ -68,9 +68,10 @@ type ExportFormValues = z.infer<typeof formSchema>;
 
 interface ExportReportCardProps {
   expenses: Expense[];
+  className?: string;
 }
 
-export function ExportReportCard({ expenses }: ExportReportCardProps) {
+export function ExportReportCard({ expenses, className }: ExportReportCardProps) {
   const { toast } = useToast();
   const { control, handleSubmit, watch, formState: { errors } } = useForm<ExportFormValues>({
     resolver: zodResolver(formSchema),
@@ -168,11 +169,11 @@ export function ExportReportCard({ expenses }: ExportReportCardProps) {
   };
 
   return (
-    <Card className="shadow-lg">
+    <Card className={cn("shadow-lg", className)}>
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2">
           <Download className="h-6 w-6 text-primary" />
-          Export Expense Report
+          Export Report
         </CardTitle>
         <CardDescription>Download your expenses as a PDF document.</CardDescription>
       </CardHeader>

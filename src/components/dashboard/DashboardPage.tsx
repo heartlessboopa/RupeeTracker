@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { ExportReportCard } from "./ExportReportCard";
 import { initialExpensesData } from '@/data/initialData';
+import { cn } from '@/lib/utils';
 
 type ActionType = 'edit' | 'delete';
 const LOCAL_STORAGE_EXPENSES_KEY = 'rupeeTrackExpenses';
@@ -127,7 +128,7 @@ export default function DashboardPage() {
     
     if (currentAction === 'edit' && selectedExpenseForAction) {
       setExpenseToEdit(selectedExpenseForAction);
-      const formElement = document.getElementById("expense-form-card"); 
+      const formElement = document.getElementById("expense-form-card-container"); 
       if (formElement) {
           formElement.scrollIntoView({ behavior: "smooth", block: "center" });
       }
@@ -170,14 +171,14 @@ export default function DashboardPage() {
   }, [expenses]);
 
   return (
-    <div className="flex-1 space-y-6 p-4 sm:p-6 md:p-8">
+    <div className="flex-1 space-y-6 p-4 sm:p-6 md:p-8 items-start">
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
         <OverviewCard title="Total Spent" value={totalSpent} icon={<TrendingDown className="h-5 w-5" />} description="Total amount spent this period." />
         <OverviewCard title="Top Category" value={topSpendingCategory} icon={<Star className="h-5 w-5" />} isCurrency={false} description="Your highest spending category."/>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-stretch">
-        <div className="lg:col-span-1" id="expense-form-card">
+        <div className="lg:col-span-1" id="expense-form-card-container">
           <ExpenseEntryForm 
             onSaveExpense={handleSaveExpense} 
             editingExpense={expenseToEdit}
@@ -190,59 +191,59 @@ export default function DashboardPage() {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-stretch">
         <div className="lg:col-span-1">
-          <ExportReportCard expenses={expenses} />
+          <ExportReportCard expenses={expenses} className="h-full" />
+        </div>
+        <div className="lg:col-span-2">
+            <Card className="shadow-lg h-full">
+                <CardHeader>
+                <CardTitle className="font-headline flex items-center gap-2">
+                    <ListChecks className="h-6 w-6 text-primary" />
+                    Recent Expenses
+                </CardTitle>
+                <CardDescription>A list of your most recent transactions.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                <ScrollArea className="h-[300px]"> {/* Adjust height as needed, or make dynamic */}
+                    {expenses.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-10">No expenses recorded yet.</p>
+                    ) : (
+                    <Table>
+                        <TableHeader>
+                        <TableRow>
+                            <TableHead>Description</TableHead>
+                            <TableHead className="hidden md:table-cell">Category</TableHead>
+                            <TableHead className="hidden md:table-cell">Date</TableHead>
+                            <TableHead className="text-right">Amount</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {expenses.slice(0,10).map((expense) => ( 
+                            <TableRow key={expense.id}>
+                            <TableCell className="font-medium">{expense.description}</TableCell>
+                            <TableCell className="hidden md:table-cell">{expense.category}</TableCell>
+                            <TableCell className="hidden md:table-cell">{format(new Date(expense.date), "dd MMM, yyyy")}</TableCell>
+                            <TableCell className="text-right"><CurrencyDisplay amount={expense.amount} /></TableCell>
+                            <TableCell className="text-right space-x-1">
+                                <Button variant="ghost" size="icon" onClick={() => initiateEditExpense(expense)} title="Edit">
+                                <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => initiateDeleteExpense(expense)} title="Delete" className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                    )}
+                </ScrollArea>
+                </CardContent>
+            </Card>
         </div>
       </div>
-
-
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="font-headline flex items-center gap-2">
-             <ListChecks className="h-6 w-6 text-primary" />
-            Recent Expenses
-          </CardTitle>
-          <CardDescription>A list of your most recent transactions.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[300px]">
-            {expenses.length === 0 ? (
-              <p className="text-muted-foreground text-center py-10">No expenses recorded yet.</p>
-            ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="hidden md:table-cell">Category</TableHead>
-                  <TableHead className="hidden md:table-cell">Date</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {expenses.slice(0,10).map((expense) => ( 
-                  <TableRow key={expense.id}>
-                    <TableCell className="font-medium">{expense.description}</TableCell>
-                    <TableCell className="hidden md:table-cell">{expense.category}</TableCell>
-                    <TableCell className="hidden md:table-cell">{format(new Date(expense.date), "dd MMM, yyyy")}</TableCell>
-                    <TableCell className="text-right"><CurrencyDisplay amount={expense.amount} /></TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button variant="ghost" size="icon" onClick={() => initiateEditExpense(expense)} title="Edit">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => initiateDeleteExpense(expense)} title="Delete" className="text-destructive hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            )}
-          </ScrollArea>
-        </CardContent>
-      </Card>
 
       <Dialog open={showPasswordConfirmDialog} onOpenChange={(open) => { if(!open) handleCancelPasswordConfirm(); else setShowPasswordConfirmDialog(open);}}>
         <DialogContent className="sm:max-w-md">
@@ -284,3 +285,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
