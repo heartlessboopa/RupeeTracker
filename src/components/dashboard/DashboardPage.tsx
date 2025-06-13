@@ -179,8 +179,8 @@ export default function DashboardPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Description</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead className="hidden md:table-cell">Category</TableHead>
+                  <TableHead className="hidden md:table-cell">Date</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -189,8 +189,8 @@ export default function DashboardPage() {
                 {expenses.slice(0,10).map((expense) => ( 
                   <TableRow key={expense.id}>
                     <TableCell className="font-medium">{expense.description}</TableCell>
-                    <TableCell>{expense.category}</TableCell>
-                    <TableCell>{format(new Date(expense.date), "dd MMM, yyyy")}</TableCell>
+                    <TableCell className="hidden md:table-cell">{expense.category}</TableCell>
+                    <TableCell className="hidden md:table-cell">{format(new Date(expense.date), "dd MMM, yyyy")}</TableCell>
                     <TableCell className="text-right"><CurrencyDisplay amount={expense.amount} /></TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button variant="ghost" size="icon" onClick={() => handleEditExpense(expense)} title="Edit">
